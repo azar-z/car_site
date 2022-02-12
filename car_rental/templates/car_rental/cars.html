@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>List Of Cars</title>
+</head>
+<body>
+<h1>Available Cars For You:</h1>
+<ul>
+{% for car in cars %}
+    <li><a href="#"> car.car_type </a> </li>
+{% empty %}
+    There are no available cars for you!
+{% endfor %}
+</ul>
+
+</body>
+</html>
