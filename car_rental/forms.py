@@ -14,6 +14,6 @@ class LoginForm(forms.Form):
 
         if username and password:
             user = authenticate(username=username, password=password)
-            if user is None:
+            if (user is None) or (not user.is_active):
                 raise ValidationError("Username and Password didn't match.")
         return cleaned_data

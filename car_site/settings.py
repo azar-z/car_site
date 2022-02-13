@@ -129,3 +129,5 @@ LOGIN_REDIRECT_URL = 'car_rental:cars'
 LOGIN_URL = 'car_rental:login'
 
 AUTH_USER_MODEL = 'car_rental.User'
+
+AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend',)
