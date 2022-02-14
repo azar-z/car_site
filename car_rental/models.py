@@ -27,5 +27,5 @@ class Car(models.Model):
     rent_end_time = models.DateTimeField('End Time', default=get_tomorrow)
 
     def __str__(self):
-        return self.car_type
+        return str(self.pk) + ". " + self.car_type
 

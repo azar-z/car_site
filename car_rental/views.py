@@ -24,7 +24,7 @@ class LoginView(generic.FormView):
 
 @method_decorator(login_required, name='dispatch')
 class CarListView(generic.ListView):
-    template_name = 'car_rental/cars.html'
+    template_name = 'car_rental/car_list.html'
     model = Car
     context_object_name = 'cars'
 

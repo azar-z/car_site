@@ -1,0 +1,25 @@
+body{
+  background: lightgray;
+}
+
+h1 {
+    color: #075454;
+    padding: 10px 20px 10px 20px;
+}
+
+table{
+    width: 100%;
+}
+
+td{
+    font-size: 17px;
+    padding: 10px;
+
+}
+
+.table_head > td{
+    color: white;
+    font-size: 20px;
+}
+
+
