@@ -1,16 +1,13 @@
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.views import generic
 
 from .models import Car
 from . import forms
-
-
-@login_required
-def show_cars(request):
-    return HttpResponse('car list')
 
 
 class LoginView(generic.FormView):
@@ -25,10 +22,21 @@ class LoginView(generic.FormView):
         return HttpResponseRedirect(reverse('car_rental:cars'))
 
 
-class CarsView(generic.ListView):
+@method_decorator(login_required, name='dispatch')
+class CarListView(generic.ListView):
     template_name = 'car_rental/cars.html'
     model = Car
     context_object_name = 'cars'
 
     def get_queryset(self):
-        return Car.objects.filter(renter=None)
+        return Car.objects.exclude(rent_end_time__gt=timezone.now())
+
+
+@method_decorator(login_required, name='dispatch')
+class CarDetailView(generic.DetailView):
+    model = Car
+    context_object_name = 'car'
+    template_name = 'car_rental/car_detail.html'
+
+    def get_queryset(self):
+        return Car.objects.all()
