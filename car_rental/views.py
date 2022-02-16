@@ -1,13 +1,13 @@
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect, HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import generic
 
-from .models import Car
+from .models import Car, RentRequest
 from . import forms
 
 
@@ -46,4 +46,32 @@ class CarDetailView(generic.DetailView):
 @login_required()
 def rent_request_view(request, pk):
     car = get_object_or_404(Car, id=pk)
-    return HttpResponse('Your request has been recorded.')
+    try:
+        rent_start_time = request.POST['rent_start_time']
+        rent_end_time = request.POST['rent_end_time']
+    except KeyError:
+        return render(request, 'car_rental/car_detail.html',
+                      {'car': car, 'error_message': "Please fill the form completely."})
+    else:
+        RentRequest.objects.create(car=car, requester=request.user, rent_end_time=rent_end_time,
+                                   rent_start_time=rent_start_time).save()
+    return HttpResponseRedirect(reverse('car_rental:requests'))
+
+
+def requests_view(request):
+    return HttpResponse('Your requests:')
+
+
+class RentRequestListView(generic.ListView):
+    template_name = 'car_rental/requests.html'
+    model = RentRequest
+    context_object_name = 'requests'
+
+    def get_queryset(self):
+        current_user = self.request.user
+        if current_user.isCarExhibition:
+            all_requests = []
+            for car in current_user.cars_owned.all():
+                all_requests.extend(car.rentrequest_set.all())
+            return all_requests
+        return current_user.rentrequest_set.all()

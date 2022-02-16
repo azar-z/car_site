@@ -8,5 +8,6 @@ urlpatterns = [
     path('cars/', views.CarListView.as_view(), name='cars'),
     path('cars/<int:pk>/', views.CarDetailView.as_view(), name='car'),
     path('cars/<int:pk>/rent/', views.rent_request_view, name='rent_request'),
+    path('requests/', views.RentRequestListView.as_view(), name='requests'),
 
 ]
