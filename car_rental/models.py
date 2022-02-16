@@ -1,4 +1,5 @@
 import datetime
+from math import ceil
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -36,8 +37,18 @@ class Car(models.Model):
     def is_rented(self):
         return self.rent_end_time > timezone.now()
 
+    def set_renter(self, renter):
+        self.renter = renter
+        self.save()
+
+    def set_owner(self, owner):
+        self.owner = owner
+        self.save()
+
 
 class RentRequest(models.Model):
+    is_accepted = models.BooleanField(default=False)
+    has_result = models.BooleanField(default=False)
     car = models.ForeignKey(Car, on_delete=models.CASCADE)
     requester = models.ForeignKey(User, on_delete=models.CASCADE)
     rent_start_time = models.DateTimeField('Start Time', default=timezone.now)
@@ -56,5 +67,5 @@ class RentRequest(models.Model):
 
     def get_price(self):
         delta_time = self.rent_end_time - self.rent_start_time
-        delta_hours = delta_time.days + delta_time.seconds//3600
+        delta_hours = delta_time.days * 24 + ceil(delta_time.seconds/3600)
         return delta_hours * self.car.price_per_hour
