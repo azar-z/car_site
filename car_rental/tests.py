@@ -25,6 +25,13 @@ def create_car(car_type='type1'):
     return car
 
 
+def create_rented_car():
+    car = create_car()
+    car.rent_end_time = timezone.now() + datetime.timedelta(hours=1)
+    car.save()
+    return car
+
+
 class LoginViewTest(TestCase):
     def test_login_existing_activated_user(self):
         username = 'Farhad'
@@ -66,8 +73,7 @@ class CarListViewTest(TestCase):
 
     def test_not_show_rented_car(self):
         login_a_user(self.client)
-        # The default rent_end_time is tomorrow
-        car = create_car()
+        car = create_rented_car()
         response = self.client.get(reverse('car_rental:cars'))
         self.assertContains(response, 'Available Cars:')
         self.assertContains(response, "There are no available cars for you!")
@@ -76,8 +82,6 @@ class CarListViewTest(TestCase):
     def test_show_available_car(self):
         login_a_user(self.client)
         car = create_car()
-        car.rent_end_time = timezone.now() + datetime.timedelta(hours=-1)
-        car.save()
         response = self.client.get(reverse('car_rental:cars'))
         self.assertContains(response, 'Available Cars:')
         self.assertNotContains(response, "There are no available cars for you!")
@@ -96,8 +100,18 @@ class CarDetailTest(TestCase):
         response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
         self.assertEqual(response.status_code, 404)
 
-    def test_existing_car(self):
+    def test_rented_car(self):
+        login_a_user(self.client)
+        car = create_rented_car()
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertContains(response, car.car_type)
+        self.assertContains(response, 'rented')
+        self.assertNotContains(response, 'Want to rent this car?')
+
+    def test_not_rented_car(self):
         login_a_user(self.client)
         car = create_car()
         response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
         self.assertContains(response, car.car_type)
+        self.assertContains(response, 'free')
+        self.assertContains(response, 'Want to rent this car?')

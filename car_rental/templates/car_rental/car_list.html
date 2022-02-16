@@ -28,7 +28,7 @@
 {% for car in cars %}
     <tr>
     <td>{{ forloop.counter }}</td>
-    <td>{{ car.car_type }}</td>
+        <td><a href="{% url 'car_rental:car' car.id %}">{{ car.car_type }}</a></td>
     <td>{{ car.price_per_hour }}</td>
     <td>{{ car.owner.username }}</td>
     </tr>

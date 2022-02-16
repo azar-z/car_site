@@ -60,13 +60,18 @@
         {% csrf_token %}
         <fieldset style="border: #075454 solid 2px; width: 40%; padding: 30px">
         <legend>Want to rent this car?</legend>
+            <div class="form-error">
+                 {% if error_message %}
+                    {{ error_message }}
+                 {% endif %}
+            </div>
             <table class="table form-table" style="width: 35%">
                 <tr>
                     <td>
                         <label for="rent_start_time">From:</label>
                     </td>
                     <td>
-                        <input id="rent_start_time" name="rent_start_time" type="datetime-local">
+                        <input required id="rent_start_time" name="rent_start_time" type="datetime-local">
                     </td>
                 </tr>
                 <tr>
@@ -74,7 +79,7 @@
                         <label for="rent_end_time">Until:</label>
                     </td>
                     <td>
-                        <input id="rent_end_time" name="rent_end_time" type="datetime-local">
+                        <input required id="rent_end_time" name="rent_end_time" type="datetime-local">
                     </td>
                 </tr>
             </table>
