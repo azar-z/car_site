@@ -1,0 +1,31 @@
+body{
+  background: lightgray;
+}
+
+.info-table > td{
+  font-size: 18px;
+}
+
+.info-table td:first-child{
+  background: darkcyan;
+  font-size: 20px;
+  color: white;
+  width: 30%;
+}
+
+h1{
+  margin: 40px;
+  color: #075454;
+}
+
+.form-table tr{
+  border: none;
+}
+
+.form-table td {
+  font-size: 18px;
+}
+
+.form-table td:first-child {
+  font-size: 20px;
+}

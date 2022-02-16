@@ -56,7 +56,7 @@ class CarListViewTest(TestCase):
 
     def test_not_login(self):
         response = self.client.post(reverse('car_rental:cars'))
-        self.assertRedirects(response, "/rental/?next=/rental/cars/")
+        self.assertRedirects(response, "/rental/?next=" + reverse('car_rental:cars'))
 
     def test_no_car_exists(self):
         login_a_user(self.client)
@@ -66,7 +66,7 @@ class CarListViewTest(TestCase):
 
     def test_not_show_rented_car(self):
         login_a_user(self.client)
-        # The default end_time is tomorrow
+        # The default rent_end_time is tomorrow
         car = create_car()
         response = self.client.get(reverse('car_rental:cars'))
         self.assertContains(response, 'Available Cars:')
@@ -81,4 +81,23 @@ class CarListViewTest(TestCase):
         response = self.client.get(reverse('car_rental:cars'))
         self.assertContains(response, 'Available Cars:')
         self.assertNotContains(response, "There are no available cars for you!")
+        self.assertContains(response, car.car_type)
+
+
+class CarDetailTest(TestCase):
+
+    def test_not_login(self):
+        create_car()
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertRedirects(response, "/rental/?next=" + str(reverse('car_rental:car', kwargs={'pk': 1})))
+
+    def test_no_car_with_this_id(self):
+        login_a_user(self.client)
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_existing_car(self):
+        login_a_user(self.client)
+        car = create_car()
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
         self.assertContains(response, car.car_type)

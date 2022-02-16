@@ -30,11 +30,12 @@
     <td>{{ forloop.counter }}</td>
     <td>{{ car.car_type }}</td>
     <td>{{ car.price_per_hour }}</td>
-    <td>{{ car.owner }}</td>
+    <td>{{ car.owner.username }}</td>
     </tr>
 {% endfor %}
 {% else %}
-    <div class="alert alert-danger"><strong>Sorry!</strong> There are no available cars for you! </div>
+    <div class="alert alert-danger" style="margin-top: 10px">
+        <strong>Sorry!</strong> There are no available cars for you! </div>
 {% endif %}
 </table>
 </div>

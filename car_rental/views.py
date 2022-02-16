@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -40,3 +41,9 @@ class CarDetailView(generic.DetailView):
 
     def get_queryset(self):
         return Car.objects.all()
+
+
+@login_required()
+def rent_request_view(request, pk):
+    car = get_object_or_404(Car, id=pk)
+    return HttpResponse('Your request has been recorded.')

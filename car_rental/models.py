@@ -1,12 +1,10 @@
-import datetime
-
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
 
 def get_tomorrow():
-    return timezone.now() + datetime.timedelta(days=1)
+    return timezone.now()
 
 
 class User(AbstractUser):
@@ -24,8 +22,11 @@ class Car(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='cars_owned')
     price_per_hour = models.IntegerField(default=10)
     rent_start_time = models.DateTimeField('Start Time', default=timezone.now)
-    rent_end_time = models.DateTimeField('End Time', default=get_tomorrow)
+    rent_end_time = models.DateTimeField('End Time', default=timezone.now)
 
     def __str__(self):
         return str(self.pk) + ". " + self.car_type
+
+    def is_rented(self):
+        return self.rent_end_time > timezone.now()
 
