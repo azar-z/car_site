@@ -20,6 +20,8 @@ class LoginView(generic.FormView):
         password = form.cleaned_data['password']
         user = authenticate(username=username, password=password)
         login(self.request, user)
+        if user.isCarExhibition:
+            return HttpResponseRedirect(reverse('car_rental:requests'))
         return HttpResponseRedirect(reverse('car_rental:cars'))
 
 
@@ -65,7 +67,7 @@ def requests_view(request):
 
 @method_decorator(login_required, name='dispatch')
 class RentRequestListView(generic.ListView):
-    template_name = 'car_rental/requests.html'
+    template_name = 'car_rental/request_list.html'
     model = RentRequest
     context_object_name = 'requests'
 

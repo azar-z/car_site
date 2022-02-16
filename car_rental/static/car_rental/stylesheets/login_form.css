@@ -1,7 +1,3 @@
-body{
-  background: lightgray;
-}
-
 form {
   border: 3px solid #f1f1f1;
   width: 30%;
@@ -34,4 +30,3 @@ legend{
   background: cadetblue;
   color: white;
 }
-

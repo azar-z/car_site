@@ -14,13 +14,23 @@ def create_user(username='Farhad', password='1111'):
 
 
 class LoginViewTest(TestCase):
-    def test_login_existing_activated_user(self):
+    def test_login_existing_activated_renter(self):
         username = 'Farhad'
         password = '1111'
         create_user(username, password)
         response = self.client.post(reverse('car_rental:login'),
                                     {'username': username, 'password': password})
         self.assertRedirects(response, reverse('car_rental:cars'))
+
+    def test_login_existing_activated_exhibition(self):
+        username = 'Farhad'
+        password = '1111'
+        user = create_user(username, password)
+        user.isCarExhibition = True
+        user.save()
+        response = self.client.post(reverse('car_rental:login'),
+                                    {'username': username, 'password': password})
+        self.assertRedirects(response, reverse('car_rental:requests'))
 
     def test_login_existing_not_activated_user(self):
         username = 'Farhad'
