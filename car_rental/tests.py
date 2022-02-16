@@ -239,3 +239,72 @@ class RentRequestListViewTest(TestCase):
         self.assertContains(response, car.car_type)
         self.assertContains(response, owner.username)
         self.assertContains(response, "Rejected")
+
+class AnswerRequestView(TestCase):
+
+    def test_not_login(self):
+        response = self.client.post(reverse('car_rental:cars'))
+        self.assertRedirects(response, "/rental/?next=" + reverse('car_rental:cars'))
+
+    def test_not_exhibition_user(self):
+        user = login_a_user(self.client)
+        user.isCarExhibition = False
+        user.save()
+        response = self.client.get(reverse('car_rental:answer_requests'))
+        self.assertRedirects(response, reverse('car_rental:requests'))
+
+    def test_not_answered_request(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        car.set_owner(owner)
+        requester = create_user('user1')
+        rent_request = create_request(requester, car)
+        response = self.client.get(reverse('car_rental:answer_requests'))
+        self.assertRedirects(response, reverse('car_rental:requests'))
+        self.assertFalse(rent_request.has_result)
+        self.assertEqual(owner.credit, 0)
+        self.assertEqual(requester.credit, 0)
+
+    def test_rejected_request(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        car.set_owner(owner)
+        car.price_per_hour = 100
+        car.save()
+        requester = create_user('user1')
+        rent_request = create_request(requester, car, timezone.now(), timezone.now() + datetime.timedelta(hours=10))
+        response = self.client.post(reverse('car_rental:answer_requests'), {'1': 'no'})
+        rent_request.refresh_from_db()
+        owner.refresh_from_db()
+        requester.refresh_from_db()
+        self.assertRedirects(response, reverse('car_rental:requests'))
+        self.assertTrue(rent_request.has_result)
+        self.assertFalse(rent_request.is_accepted)
+        self.assertEqual(owner.credit, 0)
+        self.assertEqual(requester.credit, 0)
+
+    def test_accepted_request(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        car.set_owner(owner)
+        car.price_per_hour = 100
+        car.save()
+        requester = create_user('user1')
+        rent_request = create_request(requester, car, timezone.now(), timezone.now() + datetime.timedelta(hours=10))
+        response = self.client.post(reverse('car_rental:answer_requests'), {'1': 'yes'})
+        rent_request.refresh_from_db()
+        owner.refresh_from_db()
+        requester.refresh_from_db()
+        self.assertRedirects(response, reverse('car_rental:requests'))
+        self.assertTrue(rent_request.has_result)
+        self.assertTrue(rent_request.is_accepted)
+        self.assertEqual(owner.credit, 1000)
+        self.assertEqual(requester.credit, -1000)
+
+

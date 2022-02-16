@@ -14,6 +14,12 @@ class User(AbstractUser):
     isCarExhibition = models.BooleanField(default=False)
     credit = models.IntegerField(default=0)
 
+    def get_all_requests_of_exhibition(self):
+        all_requests = []
+        for car in self.cars_owned.all():
+            all_requests.extend(car.rentrequest_set.filter(has_result=False))
+        return all_requests
+
     def change_credit(self, delta_credit):
         self.credit += delta_credit
         self.save()
@@ -55,7 +61,10 @@ class RentRequest(models.Model):
     rent_end_time = models.DateTimeField('End Time', default=get_tomorrow)
     creation_time = models.DateTimeField('Request time:', default=timezone.now)
 
-    def accept_request(self):
+    def accept(self):
+        self.is_accepted = True
+        self.has_result = True
+        self.save()
         car = self.car
         car.renter = self.requester
         car.rent_end_time = self.rent_end_time
@@ -64,6 +73,11 @@ class RentRequest(models.Model):
         price = self.get_price()
         self.requester.change_credit(-price)
         car.owner.change_credit(price)
+
+    def reject(self):
+        self.is_accepted = False
+        self.has_result = True
+        self.save()
 
     def get_price(self):
         delta_time = self.rent_end_time - self.rent_start_time

@@ -1,13 +1,13 @@
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import generic
 
-from .models import Car, RentRequest
+from .models import Car, RentRequest, User
 from . import forms
 
 
@@ -61,10 +61,6 @@ def rent_request_view(request, pk):
     return HttpResponseRedirect(reverse('car_rental:requests'))
 
 
-def requests_view(request):
-    return HttpResponse('Your requests:')
-
-
 @method_decorator(login_required, name='dispatch')
 class RentRequestListView(generic.ListView):
     template_name = 'car_rental/request_list.html'
@@ -72,15 +68,26 @@ class RentRequestListView(generic.ListView):
     context_object_name = 'requests'
 
     def get_queryset(self):
-        current_user = self.request.user
+        current_user = get_object_or_404(User, id=self.request.user.id)
         if current_user.isCarExhibition:
-            all_requests = []
-            for car in current_user.cars_owned.all():
-                all_requests.extend(car.rentrequest_set.filter(has_result=False))
-            return all_requests
+            return current_user.get_all_requests_of_exhibition()
         return current_user.rentrequest_set.all()
 
 
 @login_required()
-def answer_requests(request):
-    return HttpResponse('requests are answered')
+def answer_requests_view(request):
+    user = get_object_or_404(User, id=request.user.id)
+    if user.isCarExhibition and request.method == 'POST':
+        unanswered_requests = user.get_all_requests_of_exhibition()
+        try:
+            for unanswered_request in unanswered_requests:
+                answer = request.POST[str(unanswered_request.id)]
+                if answer == 'yes':
+                    unanswered_request.accept()
+                else:
+                    unanswered_request.reject()
+
+        except KeyError:
+            return render(request, 'car_rental/request_list.html', {'requests': unanswered_requests,
+                                                                    'error_message': "Please answer the requests!"})
+    return HttpResponseRedirect(reverse('car_rental:requests'))
