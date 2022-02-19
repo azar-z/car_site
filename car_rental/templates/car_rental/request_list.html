@@ -1,4 +1,4 @@
-{% extends 'car_rental/header.html' %}
+{% extends 'car_rental/base.html' %}
 {% load static %}
 
 {% block title %}Your Requests{% endblock %}
@@ -10,7 +10,7 @@
 {% block content %}
 <div class="container">
 
-<h1>Your Requests:</h1>
+<h1>Your Requests</h1>
 {% if error_message %}
     <div class="alert alert-danger" ><strong>{{ error_message}}</strong></div>
 {% endif %}

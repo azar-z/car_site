@@ -84,7 +84,7 @@ class CarListViewTest(TestCase):
     def test_no_car_exists(self):
         login_a_user(self.client)
         response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Available Cars:')
+        self.assertContains(response, 'Available Cars')
         self.assertContains(response, "There are no available cars for you!")
 
     def test_no_car_exists_owner(self):
@@ -93,7 +93,7 @@ class CarListViewTest(TestCase):
         owner.save()
         car = create_car()
         response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Your Cars:')
+        self.assertContains(response, 'Your Cars')
         self.assertContains(response, "You have no cars!")
         self.assertNotContains(response, car.car_type)
         self.assertNotContains(response, 'Status')
@@ -102,7 +102,7 @@ class CarListViewTest(TestCase):
         login_a_user(self.client)
         car = create_rented_car()
         response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Available Cars:')
+        self.assertContains(response, 'Available Cars')
         self.assertContains(response, "There are no available cars for you!")
         self.assertNotContains(response, car.car_type)
 
@@ -110,7 +110,7 @@ class CarListViewTest(TestCase):
         login_a_user(self.client)
         car = create_car()
         response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Available Cars:')
+        self.assertContains(response, 'Available Cars')
         self.assertNotContains(response, "There are no available cars for you!")
         self.assertContains(response, car.car_type)
 
@@ -123,7 +123,7 @@ class CarListViewTest(TestCase):
         car.owner = owner
         car.save()
         response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Your Cars:')
+        self.assertContains(response, 'Your Cars')
         self.assertNotContains(response, "You have no cars!")
         self.assertContains(response, car.car_type)
         self.assertContains(response, car.id)
@@ -136,7 +136,7 @@ class CarListViewTest(TestCase):
         owner.save()
         car = create_rented_car(renter=create_user('renter'), owner=owner)
         response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Your Cars:')
+        self.assertContains(response, 'Your Cars')
         self.assertNotContains(response, "You have no cars!")
         self.assertContains(response, car.car_type)
         self.assertContains(response, car.id)
@@ -392,4 +392,25 @@ class AnswerRequestView(TestCase):
         self.assertEqual(owner.credit, 1000)
         self.assertEqual(requester.credit, -1000)
 
+
+class ProfileViewTest(TestCase):
+
+    def test_not_login(self):
+        response = self.client.get(reverse('car_rental:profile'))
+        self.assertRedirects(response, "/rental/?next=" + reverse('car_rental:profile'))
+
+    def test_exhibition(self):
+        exhibition = login_a_user(self.client)
+        exhibition.isCarExhibition = True
+        exhibition.save()
+        response = self.client.get(reverse('car_rental:profile'))
+        self.assertContains(response, exhibition.username)
+        self.assertContains(response, 'Exhibition')
+
+
+    def test_renter(self):
+        renter = login_a_user(self.client)
+        response = self.client.get(reverse('car_rental:profile'))
+        self.assertContains(response, renter.username)
+        self.assertContains(response, 'Renter')
 

@@ -1,4 +1,4 @@
-{% extends 'car_rental/header.html' %}
+{% extends 'car_rental/base.html' %}
 {% load static %}
 
 {% block title %} Cars {% endblock %}
@@ -11,9 +11,9 @@
 <div class="container">
     <h1>
 {% if user.isCarExhibition %}
-   Your Cars:
+   Your Cars
 {% else %}
-    Available Cars:
+    Available Cars
 {% endif %}
     </h1>
 

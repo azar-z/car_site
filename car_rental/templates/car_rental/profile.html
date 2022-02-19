@@ -1,0 +1,42 @@
+{% extends 'car_rental/base.html' %}
+{% load static %}
+
+{% block title %} Profile {% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
+{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <h1>Your Profile</h1>
+ <table class="table table-striped table-hover info-table">
+     <tr>
+         <td>Username</td>
+         <td>{{ user.username }}</td>
+     </tr>
+
+     <tr>
+         <td>Type</td>
+         <td>
+             {% if user.isCarExhibition %} Exhibition {% else %} Renter {% endif %}
+         </td>
+     </tr>
+
+     <tr>
+         <td>Credit</td>
+         <td>{{ user.credit }}</td>
+     </tr>
+
+     <tr>
+         <td>ID</td>
+         <td>{{ user.id }}</td>
+     </tr>
+
+ </table>
+
+<a class="btn btn-info" href="#" role="button" style="width:19%">Change Password</a> &nbsp;
+<a class="btn btn-info" href="#" role="button" style="width:19%">Change Credit</a>
+ </div>
+{% endblock %}

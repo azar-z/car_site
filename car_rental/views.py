@@ -95,3 +95,8 @@ def answer_requests_view(request):
             return render(request, 'car_rental/request_list.html', {'requests': unanswered_requests,
                                                                     'error_message': "Please answer the requests!"})
     return HttpResponseRedirect(reverse('car_rental:requests'))
+
+
+@login_required()
+def profile_view(request):
+    return render(request, 'car_rental/profile.html')

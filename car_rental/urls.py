@@ -10,5 +10,6 @@ urlpatterns = [
     path('cars/<int:pk>/rent/', views.rent_request_view, name='rent_request'),
     path('requests/', views.RentRequestListView.as_view(), name='requests'),
     path('requests/answer/', views.answer_requests_view, name='answer_requests'),
+    path('profile/', views.profile_view, name='profile'),
 
 ]
