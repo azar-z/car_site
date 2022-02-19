@@ -1,13 +1,11 @@
 form {
   border: 3px solid #f1f1f1;
-  width: 30%;
-  margin-top: 11%;
-  margin-left: 35%;
-  alignment: center;
+  width: 400px;
+  margin-top: 9%;
   padding: 10px;
   background: darkcyan;
+  text-align: left;
 }
-
 
 input[type=text], input[type=password], input[type=submit] {
   width: 100%;
@@ -29,4 +27,5 @@ legend{
   padding: 10px;
   background: cadetblue;
   color: white;
+  text-align: center;
 }

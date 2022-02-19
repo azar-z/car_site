@@ -1,3 +1,7 @@
+h1 {
+    padding: 10px 20px 10px 20px;
+}
+
 table{
     width: 100%;
 }
@@ -8,8 +12,12 @@ td{
 
 }
 
-thead {
-    color: white;
-    font-size: 20px;
+thead tr{
     background: darkcyan;
 }
+thead  td{
+    color: white;
+    font-size: 20px;
+}
+
+
