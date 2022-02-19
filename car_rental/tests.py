@@ -62,9 +62,15 @@ def create_car(car_type='type1'):
     return car
 
 
-def create_rented_car():
+def create_rented_car(renter=None, owner=None, days=1):
+    if not renter:
+        renter = create_user('renter1')
+    if not owner:
+        owner = create_user('owner1')
     car = create_car()
-    car.rent_end_time = timezone.now() + datetime.timedelta(hours=1)
+    car.rent_end_time = timezone.now() + datetime.timedelta(days=days)
+    car.renter = renter
+    car.owner = owner
     car.save()
     return car
 
@@ -117,6 +123,12 @@ class CarDetailTest(TestCase):
         self.assertContains(response, car.car_type)
         self.assertContains(response, 'rented')
         self.assertNotContains(response, 'Want to rent this car?')
+        self.assertContains(response, 'till')
+        self.assertContains(response, car.rent_end_time.year)
+        self.assertContains(response, car.rent_end_time.day)
+        self.assertNotContains(response, 'from')
+        self.assertNotContains(response, car.renter.username)
+        self.assertContains(response, car.owner.username)
 
     def test_not_rented_car(self):
         login_a_user(self.client)
@@ -125,7 +137,40 @@ class CarDetailTest(TestCase):
         self.assertContains(response, car.car_type)
         self.assertContains(response, 'free')
         self.assertContains(response, 'Want to rent this car?')
+        self.assertNotContains(response, 'from')
+        self.assertNotContains(response, 'till')
 
+    def test_rented_car_by_renter(self):
+        renter = login_a_user(self.client)
+        car = create_rented_car(renter)
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertContains(response, car.car_type)
+        self.assertContains(response, 'is rented by you')
+        self.assertNotContains(response, 'Want to rent this car?')
+        self.assertContains(response, 'till')
+        self.assertContains(response, car.rent_end_time.year)
+        self.assertContains(response, car.rent_end_time.day)
+        self.assertContains(response, 'from')
+        self.assertContains(response, car.rent_start_time.year)
+        self.assertContains(response, car.rent_start_time.day)
+        self.assertContains(response, car.owner.username)
+
+
+    def test_rented_car_by_owner(self):
+        owner = login_a_user(self.client)
+        car = create_rented_car(owner=owner)
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertContains(response, car.car_type)
+        self.assertContains(response, 'rented')
+        self.assertContains(response, 'Status')
+        self.assertNotContains(response, 'Want to rent this car?')
+        self.assertContains(response, 'till')
+        self.assertContains(response, car.rent_end_time.year)
+        self.assertContains(response, car.rent_end_time.day)
+        self.assertContains(response, 'from')
+        self.assertContains(response, car.rent_start_time.year)
+        self.assertContains(response, car.rent_start_time.day)
+        self.assertContains(response, car.renter.username)
 
 def create_request(requester, car, start_time=timezone.now(), end_time=timezone.now() + datetime.timedelta(days=1)):
     rent_request = RentRequest.objects.create(requester=requester, car=car, rent_start_time=start_time,

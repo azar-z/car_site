@@ -12,9 +12,15 @@
     <h1>Car number {{ car.id }}</h1>
 {% if car.owner != user %}
     {% if car.is_rented %}
+        {% if car.renter != user %}
         <div style="margin-top: 10px" class="alert alert-danger">
             <strong>This car is rented!</strong>
         </div>
+        {% else %}
+        <div style="margin-top: 10px" class="alert alert-info">
+            <strong>This car is rented by you!</strong>
+        </div>
+        {% endif %}
 
     {% else %}
 
@@ -33,6 +39,13 @@
             <tr>
                 <td>Exhibition</td>
                 <td>{{ car.owner.username }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td>Status</td>
+                <td>
+                    {% if car.is_rented %} rented {% else %} free {% endif %}
+                </td>
             </tr>
             {% endif %}
             <tr>
