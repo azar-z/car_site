@@ -32,7 +32,11 @@ class CarListView(generic.ListView):
     context_object_name = 'cars'
 
     def get_queryset(self):
-        return Car.objects.exclude(rent_end_time__gt=timezone.now())
+        current_user = get_object_or_404(User, id=self.request.user.id)
+        if current_user.isCarExhibition:
+            return current_user.cars_owned.all()
+        else:
+            return Car.objects.exclude(rent_end_time__gt=timezone.now())
 
 
 @method_decorator(login_required, name='dispatch')

@@ -9,7 +9,14 @@
 
 {% block content %}
 <div class="container">
-<h1>Available Cars:</h1>
+    <h1>
+{% if user.isCarExhibition %}
+   Your Cars:
+{% else %}
+    Available Cars:
+{% endif %}
+    </h1>
+
 {% if cars %}
 <table class="table table-striped table-hover">
 
@@ -17,8 +24,20 @@
     <tr class="table_head" style="background: darkcyan;">
     <td>#</td>
     <td>Model</td>
-    <td>Price (per hour)</td>
-    <td>Exhibition</td>
+    <td>
+{% if user.isCarExhibition %}
+   Status
+{% else %}
+    Price (per hour)
+{% endif %}
+    </td>
+    <td>
+{% if user.isCarExhibition %}
+    ID
+{% else %}
+    Exhibition
+{% endif %}
+    </td>
     </tr>
     </thead>
 
@@ -26,13 +45,34 @@
     <tr>
     <td>{{ forloop.counter }}</td>
         <td><a href="{% url 'car_rental:car' car.id %}">{{ car.car_type }}</a></td>
-    <td>{{ car.price_per_hour }}</td>
-    <td>{{ car.owner.username }}</td>
+    <td>
+{% if user.isCarExhibition %}
+    {% if car.is_rented %}
+        <span style="color: darkred">rented</span>
+    {% else %}
+        <span style="color: darkgreen">free</span>
+    {% endif %}
+{% else %}
+    {{ car.price_per_hour }}
+{% endif %}
+    </td>
+    <td>
+{% if user.isCarExhibition %}
+    {{ car.id }}
+{% else %}
+    {{ car.owner.username }}
+{% endif %}
+    </td>
     </tr>
 {% endfor %}
 {% else %}
-    <div class="alert alert-danger" style="margin-top: 10px">
-        <strong>Sorry!</strong> There are no available cars for you! </div>
+
+{% if user.isCarExhibition %}
+        <div class="alert alert-danger"><strong>Sorry!</strong> You have no cars! </div>
+{% else %}
+        <div class="alert alert-danger"><strong>Sorry!</strong> There are no available cars for you! </div>
+{% endif %}
+
 {% endif %}
 </table>
 </div>

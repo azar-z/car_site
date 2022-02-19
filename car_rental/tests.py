@@ -87,6 +87,17 @@ class CarListViewTest(TestCase):
         self.assertContains(response, 'Available Cars:')
         self.assertContains(response, "There are no available cars for you!")
 
+    def test_no_car_exists_owner(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        response = self.client.get(reverse('car_rental:cars'))
+        self.assertContains(response, 'Your Cars:')
+        self.assertContains(response, "You have no cars!")
+        self.assertNotContains(response, car.car_type)
+        self.assertNotContains(response, 'Status')
+
     def test_not_show_rented_car(self):
         login_a_user(self.client)
         car = create_rented_car()
@@ -102,6 +113,35 @@ class CarListViewTest(TestCase):
         self.assertContains(response, 'Available Cars:')
         self.assertNotContains(response, "There are no available cars for you!")
         self.assertContains(response, car.car_type)
+
+    # this test gets wrong once in a while
+    def test_show_not_rented_car_to_owner(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        car.owner = owner
+        car.save()
+        response = self.client.get(reverse('car_rental:cars'))
+        self.assertContains(response, 'Your Cars:')
+        self.assertNotContains(response, "You have no cars!")
+        self.assertContains(response, car.car_type)
+        self.assertContains(response, car.id)
+        self.assertContains(response, 'free')
+        self.assertContains(response, 'Status')
+
+    def test_show_rented_car_to_owner(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_rented_car(renter=create_user('renter'), owner=owner)
+        response = self.client.get(reverse('car_rental:cars'))
+        self.assertContains(response, 'Your Cars:')
+        self.assertNotContains(response, "You have no cars!")
+        self.assertContains(response, car.car_type)
+        self.assertContains(response, car.id)
+        self.assertContains(response, 'rented')
+        self.assertContains(response, 'Status')
 
 
 class CarDetailTest(TestCase):
