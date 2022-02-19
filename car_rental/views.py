@@ -1,7 +1,9 @@
-from django.contrib.auth import authenticate, login
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -100,3 +102,44 @@ def answer_requests_view(request):
 @login_required()
 def profile_view(request):
     return render(request, 'car_rental/profile.html')
+
+
+@login_required()
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('car_rental:profile')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'car_rental/change_password.html', {
+        'form': form
+    })
+
+
+@method_decorator(login_required, name='dispatch')
+class ChangeCreditView(generic.FormView):
+    template_name = 'car_rental/change_credit.html'
+    form_class = forms.ChangeCreditForm
+
+    def form_valid(self, form):
+        delta_credit = form.cleaned_data['delta_credit']
+        current_user = get_object_or_404(User, id=self.request.user.id)
+        current_user.credit += delta_credit
+        current_user.save()
+        return HttpResponseRedirect(reverse('car_rental:profile'))
+
+
+def home_view(request):
+    return render(request, 'car_rental/home.html')
+
+
+@login_required()
+def logout_view(request):
+    request.logout()
+    return HttpResponseRedirect(reverse('car_rental:home'))

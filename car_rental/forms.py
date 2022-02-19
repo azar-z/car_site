@@ -17,3 +17,7 @@ class LoginForm(forms.Form):
             if (user is None) or (not user.is_active):
                 raise ValidationError("Username and Password didn't match.")
         return cleaned_data
+
+
+class ChangeCreditForm(forms.Form):
+    delta_credit = forms.IntegerField(label='Delta Credit')

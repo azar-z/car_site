@@ -75,14 +75,14 @@
         {% if not car.is_rented and car.owner != user%}
         <form action="{% url 'car_rental:rent_request' car.id %}" method="post">
         {% csrf_token %}
-        <fieldset style="border: #075454 solid 2px; width: 40%; padding: 30px">
+        <fieldset >
         <legend>Want to rent this car?</legend>
             <div class="form-error">
                  {% if error_message %}
                     {{ error_message }}
                  {% endif %}
             </div>
-            <table class="table form-table" style="">
+            <table class="table form-table" >
                 <tr>
                     <td>
                         <label for="rent_start_time">From:</label>

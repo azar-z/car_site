@@ -36,7 +36,12 @@
 
  </table>
 
-<a class="btn btn-info" href="#" role="button" style="width:19%">Change Password</a> &nbsp;
-<a class="btn btn-info" href="#" role="button" style="width:19%">Change Credit</a>
+<a class="btn btn-info" href="{% url 'car_rental:change_password' %}" role="button" style="width:19%">Change Password</a> &nbsp;
+<a class="btn btn-info" href="{% url 'car_rental:change_credit' %}" role="button" style="width:19%">Change Credit</a>
+
+
+{% if success_message %}
+<div class="alert alert-success" style="margin-top: 20px">{{ success_message }}</div>
+{% endif %}
  </div>
 {% endblock %}
