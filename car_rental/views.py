@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import generic
 
+from .forms import SignUpForm
 from .models import Car, RentRequest, User
 from . import forms
 
@@ -143,3 +144,22 @@ def home_view(request):
 def logout_view(request):
     logout(request)
     return HttpResponseRedirect(reverse('car_rental:home'))
+
+
+def signup(request):
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            raw_password = form.cleaned_data.get('password1')
+            user_type = form.cleaned_data.get('user_type')
+            user = authenticate(username=username, password=raw_password)
+            if user_type == 'EX':
+                user.isCarExhibition = True
+            user.save()
+            login(request, user)
+            return HttpResponseRedirect(reverse('car_rental:home'))
+    else:
+        form = SignUpForm()
+    return render(request, 'car_rental/signup.html', {'form': form})

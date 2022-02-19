@@ -1,0 +1,20 @@
+{% extends 'car_rental/base.html' %}
+{% load static %}
+
+{% block title %} Sign up {% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/login_form.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div align="center">
+<form method="post" action="{% url 'car_rental:signup' %}" style="margin-top: 3%;width: 50%" >
+    {% csrf_token %}
+            <legend>Sign up Information</legend>
+    <table class="table">{{ form.as_table }}</table>
+
+            <input type="submit" value="Login">
+</form>
+    </div>
+{% endblock %}

@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib.auth import authenticate
+from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
+
+from car_rental.models import User
 
 
 class LoginForm(forms.Form):
@@ -21,3 +24,14 @@ class LoginForm(forms.Form):
 
 class ChangeCreditForm(forms.Form):
     delta_credit = forms.IntegerField(label='Delta Credit')
+
+
+class SignUpForm(UserCreationForm):
+    CHOICES = [('EX', 'Exhibition'),
+               ('R', 'Renter')]
+
+    user_type = forms.ChoiceField(choices=CHOICES, widget=forms.RadioSelect, label='Who are you?')
+
+    class Meta:
+        model = User
+        fields = ('username', 'user_type', 'password1', 'password2', )
