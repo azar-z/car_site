@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, update_session_auth_hash
+from django.contrib.auth import authenticate, login, update_session_auth_hash, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.http import HttpResponseRedirect
@@ -141,5 +141,5 @@ def home_view(request):
 
 @login_required()
 def logout_view(request):
-    request.logout()
+    logout(request)
     return HttpResponseRedirect(reverse('car_rental:home'))

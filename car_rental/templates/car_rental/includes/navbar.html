@@ -10,7 +10,7 @@
         <ul class="navbar-nav">
 {% with url_name=request.resolver_match.url_name %}
             <li class="nav-item {% if url_name == 'home' %}active{% endif %}">
-                <a class="nav-link" href="#">Home</a>
+                <a class="nav-link" href="{% url 'car_rental:home' %}">Home</a>
             </li>
 
             <li class="nav-item {% if url_name == 'profile' %}active{% endif %}">
@@ -33,6 +33,11 @@
             <li class="nav-item {% if url_name == 'sign_up' %}active{% endif %}">
                 <a class="nav-link" href="#">Sign up</a>
             </li>
+    {% if not user.is_anonymous %}
+            <li class="nav-item">
+                <a class="nav-link btn btn-info" style="color: white;font-size: 18px;" href="{% url 'car_rental:logout' %}">Logout</a>
+            </li>
+    {% endif %}
     </ul>
     {% endwith %}
     </div>
