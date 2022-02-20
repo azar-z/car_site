@@ -9,23 +9,21 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import generic
 
-from .forms import SignUpForm
+from . import decorators
 from .models import Car, RentRequest, User
-from . import forms
+from . import forms as my_forms
 
 
 class LoginView(generic.FormView):
     template_name = 'car_rental/login.html'
-    form_class = forms.LoginForm
+    form_class = my_forms.LoginForm
 
     def form_valid(self, form):
         username = form.cleaned_data['username']
         password = form.cleaned_data['password']
         user = authenticate(username=username, password=password)
         login(self.request, user)
-        if user.isCarExhibition:
-            return HttpResponseRedirect(reverse('car_rental:requests'))
-        return HttpResponseRedirect(reverse('car_rental:cars'))
+        return HttpResponseRedirect(reverse('car_rental:home'))
 
 
 @method_decorator(login_required, name='dispatch')
@@ -78,7 +76,7 @@ class RentRequestListView(generic.ListView):
         current_user = get_object_or_404(User, id=self.request.user.id)
         if current_user.isCarExhibition:
             return current_user.get_all_requests_of_exhibition()
-        return current_user.rentrequest_set.all()
+        return current_user.rentrequest_set.all().order_by('-rent_start_time')
 
 
 @login_required()
@@ -126,7 +124,7 @@ def change_password(request):
 @method_decorator(login_required, name='dispatch')
 class ChangeCreditView(generic.FormView):
     template_name = 'car_rental/change_credit.html'
-    form_class = forms.ChangeCreditForm
+    form_class = my_forms.ChangeCreditForm
 
     def form_valid(self, form):
         delta_credit = form.cleaned_data['delta_credit']
@@ -148,7 +146,7 @@ def logout_view(request):
 
 def signup(request):
     if request.method == 'POST':
-        form = SignUpForm(request.POST)
+        form = my_forms.SignUpForm(request.POST)
         if form.is_valid():
             form.save()
             username = form.cleaned_data.get('username')
@@ -161,5 +159,42 @@ def signup(request):
             login(request, user)
             return HttpResponseRedirect(reverse('car_rental:home'))
     else:
-        form = SignUpForm()
+        form = my_forms.SignUpForm()
     return render(request, 'car_rental/signup.html', {'form': form})
+
+
+@method_decorator(decorators.user_is_exhibition, name='dispatch')
+class AddCarView(generic.CreateView):
+    model = Car
+    template_name = 'car_rental/add_car.html'
+    fields = ['car_type', 'plate', 'price_per_hour']
+
+    def form_valid(self, form):
+        response = super(AddCarView, self).form_valid(form)
+        current_user = User.objects.get(id=self.request.user.id)
+        self.object.owner = current_user
+        self.object.save()
+        return response
+
+
+@method_decorator(decorators.user_is_owner_and_car_is_not_rented, name='dispatch')
+class EditCarView(generic.UpdateView):
+    model = Car
+    template_name = 'car_rental/edit_car.html'
+    fields = ['price_per_hour']
+
+
+@method_decorator(decorators.user_is_owner_and_car_is_not_rented, name='dispatch')
+class DeleteCarView(generic.DeleteView):
+    model = Car
+    template_name = 'car_rental/delete_car.html'
+
+    def get_success_url(self):
+        return reverse('car_rental:cars')
+
+
+@method_decorator(decorators.user_requested_exhibition_car, name='dispatch')
+class UserDetailView(generic.DetailView):
+    model = User
+    context_object_name = 'user'
+    template_name = 'car_rental/user_info.html'

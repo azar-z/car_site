@@ -1,0 +1,38 @@
+{% extends 'car_rental/base.html' %}
+{% load static %}
+{% block style %}
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
+{% endblock %}
+
+{% block title %} Delete Car {% endblock %}
+
+{% block content %}
+    <div class="container" align="center">
+    <h1>Remove Your Car</h1>
+    <form method="post">
+  {% csrf_token %}
+    <fieldset style="width: 50%">
+    <legend>Are you sure you want to delete this car?</legend>
+        <table class="info-table table" style="width: 100%;">
+    <tr>
+        <td>ID</td>
+        <td>{{ object.id }}</td>
+    </tr>
+    <tr>
+        <td>Model</td>
+        <td>{{ object.car_type }}</td>
+    </tr>
+    <tr>
+        <td>Plate</td>
+        <td>{{ object.plate }}</td>
+    </tr>
+    </table>
+        <label> Yes
+            <input required type="checkbox">
+        </label>
+        <table class="table form-table">{{ form.as_table }}</table>
+    <input type="submit" class="btn btn-info" value="Delete" style="width: 50%">
+    </fieldset>
+</form>
+    </div>
+{% endblock %}

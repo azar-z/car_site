@@ -3,6 +3,7 @@ from math import ceil
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 
@@ -50,6 +51,9 @@ class Car(models.Model):
     def set_owner(self, owner):
         self.owner = owner
         self.save()
+
+    def get_absolute_url(self):
+        return reverse('car_rental:car', kwargs={'pk': self.id})
 
 
 class RentRequest(models.Model):

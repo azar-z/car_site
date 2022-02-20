@@ -106,5 +106,10 @@
         </form>
     {% endif %}
 
+    {% if not car.is_rented and car.owner == user%}
+        <a class="btn btn-info" href="{% url 'car_rental:edit_car' car.id %}" role="button" style="width:19%">Change Price</a>
+        <a class="btn btn-info" href="{% url 'car_rental:delete_car' car.id %}" role="button" style="width:19%">Remove</a>
+    {% endif %}
+
 </div>
 {% endblock %}
