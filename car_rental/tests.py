@@ -20,7 +20,7 @@ class LoginViewTest(TestCase):
         create_user(username, password)
         response = self.client.post(reverse('car_rental:login'),
                                     {'username': username, 'password': password})
-        self.assertRedirects(response, reverse('car_rental:cars'))
+        self.assertRedirects(response, reverse('car_rental:home'))
 
     def test_login_existing_activated_exhibition(self):
         username = 'Farhad'
@@ -30,7 +30,7 @@ class LoginViewTest(TestCase):
         user.save()
         response = self.client.post(reverse('car_rental:login'),
                                     {'username': username, 'password': password})
-        self.assertRedirects(response, reverse('car_rental:requests'))
+        self.assertRedirects(response, reverse('car_rental:home'))
 
     def test_login_existing_not_activated_user(self):
         username = 'Farhad'
@@ -143,6 +143,16 @@ class CarListViewTest(TestCase):
         self.assertContains(response, 'rented')
         self.assertContains(response, 'Status')
 
+    def test_not_show_need_repair_car(self):
+        login_a_user(self.client)
+        car = create_car()
+        car.needs_repair = True
+        car.save()
+        response = self.client.get(reverse('car_rental:cars'))
+        self.assertContains(response, 'Available Cars')
+        self.assertContains(response, "There are no available cars for you!")
+        self.assertNotContains(response, car.car_type)
+
 
 class CarDetailTest(TestCase):
 
@@ -211,6 +221,7 @@ class CarDetailTest(TestCase):
         self.assertContains(response, car.rent_start_time.year)
         self.assertContains(response, car.rent_start_time.day)
         self.assertContains(response, car.renter.username)
+        self.assertContains(response, 'Needs Repair?')
 
     def test_car_needs_repair(self):
         login_a_user(self.client)
@@ -221,6 +232,17 @@ class CarDetailTest(TestCase):
         self.assertContains(response, 'This car needs repair!')
         self.assertNotContains(response, 'This car is free to rent!')
         self.assertNotContains(response, 'Want to rent this car?')
+
+    def test_car_needs_repair_by_renter(self):
+        user = login_a_user(self.client)
+        car = create_rented_car(renter=user)
+        car.needs_repair = True
+        car.save()
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertContains(response, 'This car needs repair!')
+        self.assertNotContains(response, 'This car is free to rent!')
+        self.assertNotContains(response, 'Want to rent this car?')
+        self.assertContains(response, 'Confirm it needs repair')
 
 
 def create_request(requester, car, start_time=timezone.now(), end_time=timezone.now() + datetime.timedelta(days=1)):
@@ -336,6 +358,7 @@ class RentRequestListViewTest(TestCase):
         self.assertContains(response, owner.username)
         self.assertContains(response, "Rejected")
 
+
 class AnswerRequestView(TestCase):
 
     def test_not_login(self):
@@ -417,6 +440,8 @@ class ProfileViewTest(TestCase):
         response = self.client.get(reverse('car_rental:profile'))
         self.assertContains(response, exhibition.username)
         self.assertContains(response, 'Exhibition')
+        self.assertContains(response, 'Change Password')
+        self.assertContains(response, 'Change Credit')
 
 
     def test_renter(self):
@@ -424,4 +449,244 @@ class ProfileViewTest(TestCase):
         response = self.client.get(reverse('car_rental:profile'))
         self.assertContains(response, renter.username)
         self.assertContains(response, 'Renter')
+        self.assertContains(response, 'Change Password')
+        self.assertContains(response, 'Change Credit')
+
+"""
+class PasswordChangeViewTest(TestCase):
+
+    def test_invalid_password(self):
+        user = login_a_user(self.client)
+        user.set_password('1111')
+        user.save()
+        response = self.client.post(reverse('car_rental:change_password'),
+                                    {'old_password': '1111', 'new_password1': '1234', 'new_password2': '1234'},
+                                    follow=True)
+        self.assertRedirects(response, '/rental/login/?next=' + reverse('car_rental:change_password'))
+        self.assertContains(response, 'This password is too short.')
+
+    def test_wrong_old_password(self):
+        user = login_a_user(self.client)
+        user.set_password('1111')
+        user.save()
+        response = self.client.post(reverse('car_rental:change_password'),
+                                    data={'old_password': '2222', 'new_password1': '1234qsvg00', 'new_password2': '1234qsvg00'},
+                                    follow=True)
+        self.assertRedirects(response, '/rental/login/?next=' + reverse('car_rental:change_password'))
+        self.assertContains(response, 'correct')
+
+    def test_valid_password_wrong_confirmation(self):
+        user = login_a_user(self.client)
+        user.set_password('1111')
+        user.save()
+        response = self.client.post(reverse('car_rental:change_password'),
+                                    {'old_password': '1111', 'new_password1': '1234qsvg00',
+                                     'new_password2': '1234qsvg'}, follow=True)
+        self.assertRedirects(response, '/rental/login/?next=' + reverse('car_rental:change_password'))
+        self.assertContains(response, 'The two password fields didn’t match.', html=True)
+
+    def test_successful_password_change(self):
+        user = login_a_user(self.client)
+        self.assertTrue(user.check_password('1111'))
+        response = self.client.post(reverse('car_rental:change_password'),
+                                    {'old_password': '1111', 'new_password1': '1234qsvg00',
+                                     'new_password2': '1234qsvg00'}, follow=True)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('1234qsvg00'))
+        self.assertRedirects(response, reverse('car_rental:profile'))
+"""
+
+
+class CreditChangeViewTest(TestCase):
+
+    def test_changes_correctly(self):
+        user = login_a_user(self.client)
+        self.assertEqual(user.credit, 0)
+        response = self.client.post(reverse('car_rental:change_credit'), {'delta_credit': 100}, follow=True)
+        user.refresh_from_db()
+        self.assertTrue(user.credit, 100)
+        self.assertRedirects(response, reverse('car_rental:profile'))
+
+
+class LogoutViewTest(TestCase):
+
+    def test_logout_successfully(self):
+        login_a_user(self.client)
+        response = self.client.get(reverse('car_rental:logout'), follow=True)
+        self.assertTrue(response.wsgi_request.user.is_anonymous)
+        self.assertRedirects(response, reverse('car_rental:home'))
+
+
+class AddCarViewTest(TestCase):
+
+    def test_successful_car_add(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        response = self.client.post(reverse('car_rental:add_car'),
+                                    {'car_type': 'type1', 'plate': '1234', 'price_per_hour': '100'},
+                                    follow=True)
+        owner.refresh_from_db()
+        self.assertRedirects(response, reverse('car_rental:car', kwargs={'pk': '1'}))
+        self.assertEqual(owner.cars_owned.get(id=1).car_type, 'type1')
+
+    def test_non_exhibition(self):
+        login_a_user(self.client)
+        response = self.client.post(reverse('car_rental:add_car'),
+                                    {'car_type': 'type1', 'plate': '1234', 'price_per_hour': '100'},
+                                    follow=True)
+        self.assertEqual(response.status_code, 403)
+
+
+class EditCarTest(TestCase):
+
+    def test_edit_price_successfully(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        car.owner = owner
+        car.price_per_hour = 10
+        car.save()
+        response = self.client.post(reverse('car_rental:edit_car', kwargs={'pk': '1'}), {'price_per_hour': 100})
+        car.refresh_from_db()
+        self.assertEqual(car.price_per_hour, 100)
+        self.assertRedirects(response, reverse('car_rental:car', kwargs={'pk': '1'}))
+
+    def test_non_exhibition(self):
+        renter = login_a_user(self.client)
+        car = create_car()
+        car.price_per_hour = 10
+        car.save()
+        response = self.client.post(reverse('car_rental:edit_car', kwargs={'pk': '1'}), {'price_per_hour': 100})
+        car.refresh_from_db()
+        self.assertEqual(car.price_per_hour, 10)
+        self.assertEqual(response.status_code, 403)
+
+    def test_non_owner_exhibition(self):
+        non_owner = login_a_user(self.client)
+        non_owner.isCarExhibition = True
+        non_owner.save()
+        owner = create_user('owner2')
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        car.price_per_hour = 10
+        car.owner = owner
+        car.save()
+        response = self.client.post(reverse('car_rental:edit_car', kwargs={'pk': '1'}), {'price_per_hour': 100})
+        car.refresh_from_db()
+        self.assertEqual(car.price_per_hour, 10)
+        self.assertEqual(response.status_code, 403)
+
+    def test_rented_car(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_rented_car(owner=owner)
+        car.owner = owner
+        car.price_per_hour = 10
+        car.save()
+        response = self.client.post(reverse('car_rental:edit_car', kwargs={'pk': '1'}), {'price_per_hour': 100})
+        car.refresh_from_db()
+        self.assertEqual(car.price_per_hour, 10)
+        self.assertEqual(response.status_code, 403)
+
+
+class NeedRepairViewTest(TestCase):
+
+    def test_non_exhibition(self):
+        login_a_user(self.client)
+        car = create_car()
+        car.needs_repair = False
+        car.save()
+        response = self.client.post(reverse('car_rental:needs_repair', kwargs={'pk': '1'}), {'needs_repair': True})
+        car.refresh_from_db()
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(car.needs_repair)
+
+    def test_non_owner_exhibition(self):
+        non_owner = login_a_user(self.client)
+        non_owner.isCarExhibition = True
+        non_owner.save()
+        owner = create_user('owner2')
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        car.needs_repair = False
+        car.save()
+        response = self.client.post(reverse('car_rental:needs_repair', kwargs={'pk': '1'}), {'needs_repair': True})
+        car.refresh_from_db()
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(car.needs_repair)
+
+    def test_successful_owner_need_repair(self):
+        owner = login_a_user(self.client)
+        owner.isCarExhibition = True
+        owner.save()
+        car = create_car()
+        car.needs_repair = False
+        car.owner = owner
+        car.save()
+        response = self.client.post(reverse('car_rental:needs_repair', kwargs={'pk': '1'}), {'needs_repair': True})
+        car.refresh_from_db()
+        owner.refresh_from_db()
+        self.assertTrue(car.needs_repair)
+        self.assertEqual(owner.credit, 0)
+
+    def test_successful_renter_need_repair(self):
+        owner = create_user('owner1')
+        owner.isCarExhibition = True
+        owner.save()
+        renter = login_a_user(self.client)
+        car = create_car()
+        car.needs_repair = True
+        car.owner = owner
+        car.renter = renter
+        car.save()
+        response = self.client.post(reverse('car_rental:needs_repair', kwargs={'pk': '1'}), {'needs_repair': True})
+        car.refresh_from_db()
+        renter.refresh_from_db()
+        owner.refresh_from_db()
+        self.assertFalse(car.needs_repair)
+        self.assertEqual(owner.credit, 100)
+        self.assertEqual(renter.credit, -100)
+
+    def test_owner_not_need_repair_renter_need_repair(self):
+        owner = create_user('owner1')
+        owner.isCarExhibition = True
+        owner.save()
+        renter = login_a_user(self.client)
+        car = create_car()
+        car.needs_repair = False
+        car.owner = owner
+        car.renter = renter
+        car.save()
+        response = self.client.post(reverse('car_rental:needs_repair', kwargs={'pk': '1'}), {'needs_repair': True})
+        car.refresh_from_db()
+        renter.refresh_from_db()
+        owner.refresh_from_db()
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(car.needs_repair)
+        self.assertEqual(owner.credit, 0)
+        self.assertEqual(renter.credit, 0)
+
+    def test_owner_need_repair_renter_not_need_repair(self):
+        owner = create_user('owner1')
+        owner.isCarExhibition = True
+        owner.save()
+        renter = login_a_user(self.client)
+        car = create_car()
+        car.needs_repair = True
+        car.owner = owner
+        car.renter = renter
+        car.save()
+        response = self.client.post(reverse('car_rental:needs_repair', kwargs={'pk': '1'}), {'needs_repair': False})
+        car.refresh_from_db()
+        renter.refresh_from_db()
+        owner.refresh_from_db()
+        self.assertFalse(car.needs_repair)
+        self.assertEqual(owner.credit, 0)
+        self.assertEqual(renter.credit, 0)
+        self.assertEqual(response.status_code, 302)
 

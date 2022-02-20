@@ -113,7 +113,7 @@ def change_password(request):
         form = PasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
-            update_session_auth_hash(request, user)  # Important!
+            update_session_auth_hash(request, user)
             messages.success(request, 'Your password was successfully updated!')
             return redirect('car_rental:profile')
         else:
@@ -210,6 +210,7 @@ class UserDetailView(generic.DetailView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.car_renter_or_owner, name='dispatch')
+@method_decorator(decorators.car_needs_repair, name='dispatch')
 class NeedRepairCarView(generic.UpdateView):
     model = Car
     template_name = 'car_rental/need_repair.html'

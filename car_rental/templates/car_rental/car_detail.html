@@ -125,7 +125,7 @@
     {% endif %}
 
     {%if car.renter == user and car.needs_repair %}
-        <a class="btn btn-info" href="{% url 'car_rental:needs_repair' car.id %}" role="button" style="width:19%">Confirm it needs repair!</a>
+        <a class="btn btn-info" href="{% url 'car_rental:needs_repair' car.id %}" role="button" style="width:19%">Confirm it needs repair</a>
     {% endif %}
 </div>
 {% endblock %}

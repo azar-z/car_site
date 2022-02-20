@@ -54,3 +54,15 @@ def car_renter_or_owner(function):
     wrap.__doc__ = function.__doc__
     wrap.__name__ = function.__name__
     return wrap
+
+
+def car_needs_repair(function):
+    def wrap(request, *args, **kwargs):
+        car = Car.objects.get(id=kwargs['pk'])
+        if car.needs_repair:
+            return function(request, *args, **kwargs)
+        else:
+            raise PermissionDenied
+    wrap.__doc__ = function.__doc__
+    wrap.__name__ = function.__name__
+    return wrap
