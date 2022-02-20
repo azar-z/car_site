@@ -212,6 +212,17 @@ class CarDetailTest(TestCase):
         self.assertContains(response, car.rent_start_time.day)
         self.assertContains(response, car.renter.username)
 
+    def test_car_needs_repair(self):
+        login_a_user(self.client)
+        car = create_rented_car()
+        car.needs_repair = True
+        car.save()
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertContains(response, 'This car needs repair!')
+        self.assertNotContains(response, 'This car is free to rent!')
+        self.assertNotContains(response, 'Want to rent this car?')
+
+
 def create_request(requester, car, start_time=timezone.now(), end_time=timezone.now() + datetime.timedelta(days=1)):
     rent_request = RentRequest.objects.create(requester=requester, car=car, rent_start_time=start_time,
                                               rent_end_time=end_time)

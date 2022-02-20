@@ -1,0 +1,40 @@
+{% extends 'car_rental/base.html' %}
+{% load static %}
+{% block style %}
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
+{% endblock %}
+
+{% block title %} Car Needs Repair {% endblock %}
+
+{% block content %}
+    <div class="container" align="center">
+    <h1>Confirm Repair Need</h1>
+    <form method="post">
+  {% csrf_token %}
+    <fieldset style="width: 50%">
+    <legend>Are you sure this car needs repair?</legend>
+        <table class="info-table table" style="width: 100%;">
+    <tr>
+        <td>ID</td>
+        <td>{{ object.id }}</td>
+    </tr>
+    <tr>
+        <td>Model</td>
+        <td>{{ object.car_type }}</td>
+    </tr>
+    <tr>
+        <td>Plate</td>
+        <td>{{ object.plate }}</td>
+    </tr>
+    </table>
+        {% if user == object.owner %}
+            <p class="alert alert-info">If the car needs repair 100$ will be added to your credit after renter's confirmation.</p>
+        {% else %}
+            <p class="alert alert-warning">Your credit will decrease 100$ after confirmation!</p>
+        {% endif %}
+        <table class="table form-table">{{ form.as_table }}</table>
+    <input type="submit" class="btn btn-info" value="Confirm" style="width: 50%">
+    </fieldset>
+</form>
+    </div>
+{% endblock %}

@@ -23,17 +23,27 @@
         {% endif %}
 
     {% else %}
-
+        {% if not car.needs_repair %}
         <div style="margin-top: 10px" class="alert alert-success">
             <strong>This car is free to rent!</strong>
         </div>
-    {% endif%}
+        {% endif%}
+    {% endif %}
+{% endif %}
+{% if car.needs_repair %}
+       <div style="margin-top: 10px" class="alert alert-danger">
+            <strong>This car needs repair!</strong>
+        </div>
 {% endif %}
 
         <table class="table table-striped table-hover info-table">
             <tr>
                 <td>Model</td>
                 <td>{{ car.car_type }}</td>
+            </tr>
+            <tr>
+                <td>Plate</td>
+                <td>{{ car.plate }}</td>
             </tr>
             {% if car.owner != user %}
             <tr>
@@ -72,7 +82,7 @@
             {% endif %}
         </table>
 
-        {% if not car.is_rented and car.owner != user%}
+        {% if not car.is_rented and car.owner != user and not car.needs_repair%}
         <form action="{% url 'car_rental:rent_request' car.id %}" method="post">
         {% csrf_token %}
         <fieldset >
@@ -110,6 +120,12 @@
         <a class="btn btn-info" href="{% url 'car_rental:edit_car' car.id %}" role="button" style="width:19%">Change Price</a>
         <a class="btn btn-info" href="{% url 'car_rental:delete_car' car.id %}" role="button" style="width:19%">Remove</a>
     {% endif %}
+    {%if car.owner == user %}
+        <a class="btn btn-info" href="{% url 'car_rental:needs_repair' car.id %}" role="button" style="width:19%">Needs Repair?</a>
+    {% endif %}
 
+    {%if car.renter == user and car.needs_repair %}
+        <a class="btn btn-info" href="{% url 'car_rental:needs_repair' car.id %}" role="button" style="width:19%">Confirm it needs repair!</a>
+    {% endif %}
 </div>
 {% endblock %}

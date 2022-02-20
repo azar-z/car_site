@@ -14,6 +14,10 @@ from .models import Car, RentRequest, User
 from . import forms as my_forms
 
 
+def get_current_user(request):
+    return User.objects.get(id=request.user.id)
+
+
 class LoginView(generic.FormView):
     template_name = 'car_rental/login.html'
     form_class = my_forms.LoginForm
@@ -37,7 +41,7 @@ class CarListView(generic.ListView):
         if current_user.isCarExhibition:
             return current_user.cars_owned.all()
         else:
-            return Car.objects.exclude(rent_end_time__gt=timezone.now())
+            return Car.objects.exclude(rent_end_time__gt=timezone.now()).filter(needs_repair=False)
 
 
 @method_decorator(login_required, name='dispatch')
@@ -163,6 +167,7 @@ def signup(request):
     return render(request, 'car_rental/signup.html', {'form': form})
 
 
+@method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_exhibition, name='dispatch')
 class AddCarView(generic.CreateView):
     model = Car
@@ -177,6 +182,7 @@ class AddCarView(generic.CreateView):
         return response
 
 
+@method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_owner_and_car_is_not_rented, name='dispatch')
 class EditCarView(generic.UpdateView):
     model = Car
@@ -184,6 +190,7 @@ class EditCarView(generic.UpdateView):
     fields = ['price_per_hour']
 
 
+@method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_owner_and_car_is_not_rented, name='dispatch')
 class DeleteCarView(generic.DeleteView):
     model = Car
@@ -193,8 +200,29 @@ class DeleteCarView(generic.DeleteView):
         return reverse('car_rental:cars')
 
 
+@method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_requested_exhibition_car, name='dispatch')
 class UserDetailView(generic.DetailView):
     model = User
     context_object_name = 'user'
     template_name = 'car_rental/user_info.html'
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.car_renter_or_owner, name='dispatch')
+class NeedRepairCarView(generic.UpdateView):
+    model = Car
+    template_name = 'car_rental/need_repair.html'
+    fields = ['needs_repair']
+
+    def form_valid(self, form):
+        response = super(NeedRepairCarView, self).form_valid(form)
+        car = self.object
+        if car.renter == get_current_user(self.request):
+            if car.needs_repair:
+                car.renter.change_credit(-100)
+                car.owner.change_credit(100)
+            car.needs_repair = False
+            car.save()
+        return response
+

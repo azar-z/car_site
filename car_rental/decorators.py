@@ -41,3 +41,16 @@ def user_requested_exhibition_car(function):
     wrap.__doc__ = function.__doc__
     wrap.__name__ = function.__name__
     return wrap
+
+
+def car_renter_or_owner(function):
+    def wrap(request, *args, **kwargs):
+        current_user = User.objects.get(id=request.user.id)
+        car = Car.objects.get(id=kwargs['pk'])
+        if current_user == car.renter or current_user == car.owner:
+            return function(request, *args, **kwargs)
+        else:
+            raise PermissionDenied
+    wrap.__doc__ = function.__doc__
+    wrap.__name__ = function.__name__
+    return wrap

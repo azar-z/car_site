@@ -37,6 +37,7 @@ class Car(models.Model):
     price_per_hour = models.IntegerField(default=10)
     rent_start_time = models.DateTimeField('Start Time', default=timezone.now)
     rent_end_time = models.DateTimeField('End Time', default=timezone.now)
+    needs_repair = models.BooleanField(default=False)
 
     def __str__(self):
         return str(self.pk) + ". " + self.car_type
