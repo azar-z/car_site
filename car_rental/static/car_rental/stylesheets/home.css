@@ -1,7 +1,23 @@
 h2 {
-  color: #075454;
- font-size:50px;
-  margin-top: 10px;
- letter-spacing:-1.5px;
-  font-family: Tahoma, Verdana, sans-serif;
- }
+    color: #075454;
+    font-size: 40px;
+    margin-top: 10px;
+    letter-spacing: -1.5px;
+    font-family: Tahoma, Verdana, sans-serif;
+    padding: 10px;
+}
+
+#main_img {
+ width: 90%;
+ padding: 10px;
+ alignment: center;
+ margin-left: auto;
+ margin-right: auto;
+ display: block;
+}
+
+p {
+    color: darkslategray;
+    font-size: 20px;
+    margin-left: 3%;
+}
