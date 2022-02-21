@@ -18,8 +18,7 @@ class LoginViewTest(TestCase):
         username = 'Farhad'
         password = '1111'
         create_user(username, password)
-        response = self.client.post(reverse('car_rental:login'),
-                                    {'username': username, 'password': password})
+        response = self.client.post(reverse('car_rental:login'), {'username': username, 'password': password})
         self.assertRedirects(response, reverse('car_rental:home'))
 
     def test_login_existing_activated_exhibition(self):
@@ -28,8 +27,7 @@ class LoginViewTest(TestCase):
         user = create_user(username, password)
         user.isCarExhibition = True
         user.save()
-        response = self.client.post(reverse('car_rental:login'),
-                                    {'username': username, 'password': password})
+        response = self.client.post(reverse('car_rental:login'), {'username': username, 'password': password})
         self.assertRedirects(response, reverse('car_rental:home'))
 
     def test_login_existing_not_activated_user(self):
@@ -79,7 +77,7 @@ class CarListViewTest(TestCase):
 
     def test_not_login(self):
         response = self.client.post(reverse('car_rental:cars'))
-        self.assertRedirects(response, "/rental/?next=" + reverse('car_rental:cars'))
+        self.assertRedirects(response, reverse('car_rental:login') + "?next=" + reverse('car_rental:cars'))
 
     def test_no_car_exists(self):
         login_a_user(self.client)
@@ -159,7 +157,8 @@ class CarDetailTest(TestCase):
     def test_not_login(self):
         create_car()
         response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
-        self.assertRedirects(response, "/rental/?next=" + str(reverse('car_rental:car', kwargs={'pk': 1})))
+        self.assertRedirects(response,
+                             reverse('car_rental:login') + "?next=" + str(reverse('car_rental:car', kwargs={'pk': 1})))
 
     def test_no_car_with_this_id(self):
         login_a_user(self.client)
@@ -204,7 +203,6 @@ class CarDetailTest(TestCase):
         self.assertContains(response, car.rent_start_time.year)
         self.assertContains(response, car.rent_start_time.day)
         self.assertContains(response, car.owner.username)
-
 
     def test_rented_car_by_owner(self):
         owner = login_a_user(self.client)
@@ -257,7 +255,8 @@ class RentRequestListViewTest(TestCase):
     def test_not_login(self):
         create_car()
         response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
-        self.assertRedirects(response, "/rental/?next=" + str(reverse('car_rental:car', kwargs={'pk': 1})))
+        self.assertRedirects(response,
+                             reverse('car_rental:login') + "?next=" + str(reverse('car_rental:car', kwargs={'pk': 1})))
 
     def test_exhibition_no_request(self):
         user = login_a_user(self.client)
@@ -363,7 +362,7 @@ class AnswerRequestView(TestCase):
 
     def test_not_login(self):
         response = self.client.post(reverse('car_rental:cars'))
-        self.assertRedirects(response, "/rental/?next=" + reverse('car_rental:cars'))
+        self.assertRedirects(response, reverse('car_rental:login') + "?next=" + reverse('car_rental:cars'))
 
     def test_not_exhibition_user(self):
         user = login_a_user(self.client)
@@ -431,7 +430,7 @@ class ProfileViewTest(TestCase):
 
     def test_not_login(self):
         response = self.client.get(reverse('car_rental:profile'))
-        self.assertRedirects(response, "/rental/?next=" + reverse('car_rental:profile'))
+        self.assertRedirects(response, reverse('car_rental:login') + "?next=" + reverse('car_rental:profile'))
 
     def test_exhibition(self):
         exhibition = login_a_user(self.client)
@@ -443,7 +442,6 @@ class ProfileViewTest(TestCase):
         self.assertContains(response, 'Change Password')
         self.assertContains(response, 'Change Credit')
 
-
     def test_renter(self):
         renter = login_a_user(self.client)
         response = self.client.get(reverse('car_rental:profile'))
@@ -452,49 +450,36 @@ class ProfileViewTest(TestCase):
         self.assertContains(response, 'Change Password')
         self.assertContains(response, 'Change Credit')
 
-"""
+
 class PasswordChangeViewTest(TestCase):
 
     def test_invalid_password(self):
-        user = login_a_user(self.client)
-        user.set_password('1111')
-        user.save()
+        login_a_user(self.client)
         response = self.client.post(reverse('car_rental:change_password'),
                                     {'old_password': '1111', 'new_password1': '1234', 'new_password2': '1234'},
                                     follow=True)
-        self.assertRedirects(response, '/rental/login/?next=' + reverse('car_rental:change_password'))
         self.assertContains(response, 'This password is too short.')
 
     def test_wrong_old_password(self):
-        user = login_a_user(self.client)
-        user.set_password('1111')
-        user.save()
-        response = self.client.post(reverse('car_rental:change_password'),
-                                    data={'old_password': '2222', 'new_password1': '1234qsvg00', 'new_password2': '1234qsvg00'},
-                                    follow=True)
-        self.assertRedirects(response, '/rental/login/?next=' + reverse('car_rental:change_password'))
-        self.assertContains(response, 'correct')
+        login_a_user(self.client)
+        data = {'old_password': '2222', 'new_password1': '1234qsvg00', 'new_password2': '1234qsvg00'}
+        response = self.client.post(reverse('car_rental:change_password'), data, follow=True)
+        self.assertContains(response, 'Your old password was entered incorrectly. Please enter it again.')
 
     def test_valid_password_wrong_confirmation(self):
-        user = login_a_user(self.client)
-        user.set_password('1111')
-        user.save()
+        login_a_user(self.client)
         response = self.client.post(reverse('car_rental:change_password'),
                                     {'old_password': '1111', 'new_password1': '1234qsvg00',
                                      'new_password2': '1234qsvg'}, follow=True)
-        self.assertRedirects(response, '/rental/login/?next=' + reverse('car_rental:change_password'))
-        self.assertContains(response, 'The two password fields didn’t match.', html=True)
+        self.assertContains(response, 'The two password fields didn’t match.')
 
     def test_successful_password_change(self):
         user = login_a_user(self.client)
-        self.assertTrue(user.check_password('1111'))
-        response = self.client.post(reverse('car_rental:change_password'),
-                                    {'old_password': '1111', 'new_password1': '1234qsvg00',
-                                     'new_password2': '1234qsvg00'}, follow=True)
+        data = {'old_password': '1111', 'new_password1': '1234qsvg00', 'new_password2': '1234qsvg00'}
+        response = self.client.post(reverse('car_rental:change_password'), data, follow=True)
         user.refresh_from_db()
         self.assertTrue(user.check_password('1234qsvg00'))
         self.assertRedirects(response, reverse('car_rental:profile'))
-"""
 
 
 class CreditChangeViewTest(TestCase):
@@ -524,8 +509,7 @@ class AddCarViewTest(TestCase):
         owner.isCarExhibition = True
         owner.save()
         response = self.client.post(reverse('car_rental:add_car'),
-                                    {'car_type': 'type1', 'plate': '1234', 'price_per_hour': '100'},
-                                    follow=True)
+                                    {'car_type': 'type1', 'plate': '1234', 'price_per_hour': '100'}, follow=True)
         owner.refresh_from_db()
         self.assertRedirects(response, reverse('car_rental:car', kwargs={'pk': '1'}))
         self.assertEqual(owner.cars_owned.get(id=1).car_type, 'type1')
@@ -533,8 +517,7 @@ class AddCarViewTest(TestCase):
     def test_non_exhibition(self):
         login_a_user(self.client)
         response = self.client.post(reverse('car_rental:add_car'),
-                                    {'car_type': 'type1', 'plate': '1234', 'price_per_hour': '100'},
-                                    follow=True)
+                                    {'car_type': 'type1', 'plate': '1234', 'price_per_hour': '100'}, follow=True)
         self.assertEqual(response.status_code, 403)
 
 
@@ -561,7 +544,7 @@ class EditCarTest(TestCase):
         response = self.client.post(reverse('car_rental:edit_car', kwargs={'pk': '1'}), {'price_per_hour': 100})
         car.refresh_from_db()
         self.assertEqual(car.price_per_hour, 10)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_non_owner_exhibition(self):
         non_owner = login_a_user(self.client)
@@ -577,7 +560,7 @@ class EditCarTest(TestCase):
         response = self.client.post(reverse('car_rental:edit_car', kwargs={'pk': '1'}), {'price_per_hour': 100})
         car.refresh_from_db()
         self.assertEqual(car.price_per_hour, 10)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_rented_car(self):
         owner = login_a_user(self.client)
@@ -590,7 +573,7 @@ class EditCarTest(TestCase):
         response = self.client.post(reverse('car_rental:edit_car', kwargs={'pk': '1'}), {'price_per_hour': 100})
         car.refresh_from_db()
         self.assertEqual(car.price_per_hour, 10)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
 
 class NeedRepairViewTest(TestCase):
@@ -602,7 +585,7 @@ class NeedRepairViewTest(TestCase):
         car.save()
         response = self.client.post(reverse('car_rental:needs_repair', kwargs={'pk': '1'}), {'needs_repair': True})
         car.refresh_from_db()
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
         self.assertFalse(car.needs_repair)
 
     def test_non_owner_exhibition(self):
@@ -617,7 +600,7 @@ class NeedRepairViewTest(TestCase):
         car.save()
         response = self.client.post(reverse('car_rental:needs_repair', kwargs={'pk': '1'}), {'needs_repair': True})
         car.refresh_from_db()
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
         self.assertFalse(car.needs_repair)
 
     def test_successful_owner_need_repair(self):
@@ -666,7 +649,7 @@ class NeedRepairViewTest(TestCase):
         car.refresh_from_db()
         renter.refresh_from_db()
         owner.refresh_from_db()
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
         self.assertFalse(car.needs_repair)
         self.assertEqual(owner.credit, 0)
         self.assertEqual(renter.credit, 0)
@@ -690,3 +673,24 @@ class NeedRepairViewTest(TestCase):
         self.assertEqual(renter.credit, 0)
         self.assertEqual(response.status_code, 302)
 
+
+class UserDetailViewTest(TestCase):
+
+    def test_not_requested_user(self):
+        user1 = login_a_user(self.client)
+        user2 = create_user('user2')
+        response = self.client.get(reverse('car_rental:user_info', kwargs={'pk': 2}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_requested_user(self):
+        user1 = login_a_user(self.client)
+        user2 = create_user('user2')
+        car = create_car()
+        car.owner = user1
+        car.save()
+        request = create_request(user2, car)
+        response = self.client.get(reverse('car_rental:user_info', kwargs={'pk': 2}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, user2.username)
+        self.assertContains(response, user2.id)
+        self.assertContains(response, 'Renter')

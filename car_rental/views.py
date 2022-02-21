@@ -97,8 +97,8 @@ def answer_requests_view(request):
                     unanswered_request.reject()
 
         except KeyError:
-            return render(request, 'car_rental/request_list.html', {'requests': unanswered_requests,
-                                                                    'error_message': "Please answer the requests!"})
+            return render(request, 'car_rental/request_list.html',
+                          {'requests': unanswered_requests, 'error_message': "Please answer the requests!"})
     return HttpResponseRedirect(reverse('car_rental:requests'))
 
 
@@ -120,9 +120,7 @@ def change_password(request):
             messages.error(request, 'Please correct the error below.')
     else:
         form = PasswordChangeForm(request.user)
-    return render(request, 'car_rental/change_password.html', {
-        'form': form
-    })
+    return render(request, 'car_rental/change_password.html', {'form': form})
 
 
 @method_decorator(login_required, name='dispatch')
@@ -183,15 +181,17 @@ class AddCarView(generic.CreateView):
 
 
 @method_decorator(login_required, name='dispatch')
-@method_decorator(decorators.user_is_owner_and_car_is_not_rented, name='dispatch')
 class EditCarView(generic.UpdateView):
     model = Car
     template_name = 'car_rental/edit_car.html'
     fields = ['price_per_hour']
 
+    def get_queryset(self):
+        current_user = get_current_user(self.request)
+        return current_user.cars_owned.filter(rent_end_time__lte=timezone.now())
+
 
 @method_decorator(login_required, name='dispatch')
-@method_decorator(decorators.user_is_owner_and_car_is_not_rented, name='dispatch')
 class DeleteCarView(generic.DeleteView):
     model = Car
     template_name = 'car_rental/delete_car.html'
@@ -199,18 +199,28 @@ class DeleteCarView(generic.DeleteView):
     def get_success_url(self):
         return reverse('car_rental:cars')
 
+    def get_queryset(self):
+        current_user = get_current_user(self.request)
+        return current_user.cars_owned.filter(rent_end_time__lte=timezone.now())
+
 
 @method_decorator(login_required, name='dispatch')
-@method_decorator(decorators.user_requested_exhibition_car, name='dispatch')
 class UserDetailView(generic.DetailView):
     model = User
     context_object_name = 'user'
     template_name = 'car_rental/user_info.html'
 
+    def get_queryset(self):
+        current_user = get_current_user(self.request)
+        queryset = User.objects.none()
+        for car in current_user.cars_owned.all():
+            for rent_request in car.rentrequest_set.all():
+                requester = rent_request.requester
+                queryset |= User.objects.filter(id=requester.id)
+        return queryset
+
 
 @method_decorator(login_required, name='dispatch')
-@method_decorator(decorators.car_renter_or_owner, name='dispatch')
-@method_decorator(decorators.car_needs_repair, name='dispatch')
 class NeedRepairCarView(generic.UpdateView):
     model = Car
     template_name = 'car_rental/need_repair.html'
@@ -227,3 +237,9 @@ class NeedRepairCarView(generic.UpdateView):
             car.save()
         return response
 
+    def get_queryset(self):
+        current_user = get_current_user(self.request)
+        if current_user.isCarExhibition:
+            return current_user.cars_owned.all()
+        else:
+            return current_user.cars_rented.filter(needs_repair=True)
