@@ -1,0 +1,38 @@
+{% extends 'car_rental/base.html' %}
+{% load static %}
+{% block style %}
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
+{% endblock %}
+
+{% block title %} Remove Staff {% endblock %}
+
+{% block content %}
+    <div class="container" align="center">
+    <h1>Remove Your Staff</h1>
+    <form method="post">
+  {% csrf_token %}
+    <fieldset style="width: 50%">
+    <legend>Are you sure you want to delete this staff?</legend>
+        <table class="info-table table" style="width: 100%;">
+    <tr>
+        <td>Staff ID</td>
+        <td>{{ object.staff.id }}</td>
+    </tr>
+    <tr>
+        <td>Username</td>
+        <td>{{ object.username }}</td>
+    </tr>
+    <tr>
+        <td>Type</td>
+        <td>{% if object.staff.is_senior %} Senior {% else %} Normal {% endif %}</td>
+    </tr>
+    </table>
+        <label> Yes
+            <input required type="checkbox">
+        </label>
+        <table class="table form-table">{{ form.as_table }}</table>
+    <input type="submit" class="btn btn-info" value="Delete" style="width: 50%">
+    </fieldset>
+</form>
+    </div>
+{% endblock %}

@@ -10,7 +10,7 @@
 {% block content %}
 <div class="container">
     <h1>Car number {{ car.id }}</h1>
-{% if car.owner != user %}
+{% if car.owner != user.staff.exhibition %}
     {% if car.is_rented %}
         {% if car.renter != user %}
         <div style="margin-top: 10px" class="alert alert-danger">
@@ -45,10 +45,10 @@
                 <td>Plate</td>
                 <td>{{ car.plate }}</td>
             </tr>
-            {% if car.owner != user %}
+            {% if car.owner != user.staff.exhibition %}
             <tr>
                 <td>Exhibition</td>
-                <td>{{ car.owner.username }}</td>
+                <td>{{ car.owner.name }}</td>
             </tr>
             {% else %}
             <tr>
@@ -63,7 +63,7 @@
                 <td>{{ car.price_per_hour }}</td>
             </tr>
             {% if car.is_rented %}
-            {% if car.owner == user or car.renter == user %}
+            {% if car.owner == user.staff.exhibition or car.renter == user %}
             <tr>
                 <td>It is rented from:</td>
                 <td>{{ car.rent_start_time }}</td>
@@ -73,7 +73,7 @@
                 <td>It is rented till:</td>
                 <td>{{ car.rent_end_time }}</td>
             </tr>
-            {% if car.owner == user %}
+            {% if car.owner == user.staff.exhibition %}
             <tr>
                 <td>Renter</td>
                 <td>{{ car.renter.username }}</td>
@@ -82,7 +82,7 @@
             {% endif %}
         </table>
 
-        {% if not car.is_rented and car.owner != user and not car.needs_repair%}
+        {% if not car.is_rented and car.owner != user.staff.exhibition and not car.needs_repair%}
         <form action="{% url 'car_rental:rent_request' car.id %}" method="post">
         {% csrf_token %}
         <fieldset >
@@ -116,11 +116,11 @@
         </form>
     {% endif %}
 
-    {% if not car.is_rented and car.owner == user%}
+    {% if not car.is_rented and car.owner == user.staff.exhibition%}
         <a class="btn btn-info" href="{% url 'car_rental:edit_car' car.id %}" role="button" style="width:19%">Change Price</a>
         <a class="btn btn-info" href="{% url 'car_rental:delete_car' car.id %}" role="button" style="width:19%">Remove</a>
     {% endif %}
-    {%if car.owner == user %}
+    {%if car.owner == user.staff.exhibition %}
         <a class="btn btn-info" href="{% url 'car_rental:needs_repair' car.id %}" role="button" style="width:19%">Needs Repair?</a>
     {% endif %}
 

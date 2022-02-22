@@ -10,7 +10,7 @@
 {% block content %}
 <div class="container">
     <h1>
-{% if user.isCarExhibition %}
+{% if user.is_staff %}
    Your Cars
 {% else %}
     Available Cars
@@ -25,14 +25,14 @@
     <td>#</td>
     <td>Model</td>
     <td>
-{% if user.isCarExhibition %}
+{% if user.is_staff %}
    Status
 {% else %}
     Price (per hour)
 {% endif %}
     </td>
     <td>
-{% if user.isCarExhibition %}
+{% if user.is_staff %}
     ID
 {% else %}
     Exhibition
@@ -46,7 +46,7 @@
     <td>{{ forloop.counter }}</td>
         <td><a href="{% url 'car_rental:car' car.id %}">{{ car.car_type }}</a></td>
     <td>
-{% if user.isCarExhibition %}
+{% if user.is_staff %}
     {% if car.is_rented %}
         <span style="color: darkred">rented</span>
     {% else %}
@@ -57,17 +57,17 @@
 {% endif %}
     </td>
     <td>
-{% if user.isCarExhibition %}
+{% if user.is_staff %}
     {{ car.id }}
 {% else %}
-    {{ car.owner.username }}
+    {{ car.owner.name }}
 {% endif %}
     </td>
     </tr>
 {% endfor %}
 {% else %}
 
-{% if user.isCarExhibition %}
+{% if user.is_staff %}
         <div class="alert alert-danger"><strong>Sorry!</strong> You have no cars! </div>
 {% else %}
         <div class="alert alert-danger"><strong>Sorry!</strong> There are no available cars for you! </div>

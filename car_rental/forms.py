@@ -35,3 +35,16 @@ class SignUpForm(UserCreationForm):
     class Meta:
         model = User
         fields = ('username', 'user_type', 'password1', 'password2', )
+
+
+class StaffCreationForm(UserCreationForm):
+
+    CHOICES = [('N', 'Normal'),
+               ('S', 'Senior')]
+
+    staff_type = forms.ChoiceField(choices=CHOICES, widget=forms.RadioSelect,
+                                   label='What kind of staff are you adding?')
+
+    class Meta:
+        model = User
+        fields = ('username', 'staff_type', 'password1', 'password2', )

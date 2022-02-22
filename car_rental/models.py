@@ -12,28 +12,52 @@ def get_tomorrow():
 
 
 class User(AbstractUser):
-    isCarExhibition = models.BooleanField(default=False)
     credit = models.IntegerField(default=0)
 
-    def get_all_requests_of_exhibition(self):
-        all_requests = []
-        for car in self.cars_owned.all():
-            all_requests.extend(car.rentrequest_set.filter(has_result=False))
-        return all_requests
+    def change_credit(self, delta_credit):
+        if self.is_staff:
+            self.staff.exhibition.change_credit(delta_credit)
+        else:
+            self.credit += delta_credit
+            self.save()
+
+    def __str__(self):
+        return self.username + " :  " + ('Car Exhibition' if self.is_staff else 'Renter')
+
+
+class Exhibition(models.Model):
+    name = models.CharField(max_length=200)
+    credit = models.IntegerField(default=0)
+
+    def get_all_requests(self):
+        return RentRequest.objects.filter(car__owner=self)
 
     def change_credit(self, delta_credit):
         self.credit += delta_credit
         self.save()
 
-    def __str__(self):
-        return self.username + " :  " + ('Car Exhibition' if self.isCarExhibition else 'Renter')
+
+class StaffManager(models.Manager):
+
+    def create(self, *args, **kwargs):
+        staff = super(StaffManager, self).create(*args, **kwargs)
+        staff.user.is_staff = True
+        staff.user.save()
+        return staff
+
+
+class Staff(models.Model):
+    is_senior = models.BooleanField(default=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    exhibition = models.ForeignKey(Exhibition, on_delete=models.CASCADE)
+    objects = StaffManager()
 
 
 class Car(models.Model):
     car_type = models.CharField(max_length=50, default='type0')
     plate = models.CharField(max_length=8, default='12345678')
     renter = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL, related_name='cars_rented')
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='cars_owned')
+    owner = models.ForeignKey(Exhibition, on_delete=models.CASCADE, null=True, related_name='cars_owned')
     price_per_hour = models.IntegerField(default=10)
     rent_start_time = models.DateTimeField('Start Time', default=timezone.now)
     rent_end_time = models.DateTimeField('End Time', default=timezone.now)
@@ -58,6 +82,7 @@ class Car(models.Model):
 
 
 class RentRequest(models.Model):
+    price = models.IntegerField(default=0)
     is_accepted = models.BooleanField(default=False)
     has_result = models.BooleanField(default=False)
     car = models.ForeignKey(Car, on_delete=models.CASCADE)
@@ -65,23 +90,27 @@ class RentRequest(models.Model):
     rent_start_time = models.DateTimeField('Start Time', default=timezone.now)
     rent_end_time = models.DateTimeField('End Time', default=get_tomorrow)
     creation_time = models.DateTimeField('Request time:', default=timezone.now)
+    responser = models.ForeignKey(Staff, on_delete=models.SET_NULL, default=None, null=True)
 
-    def accept(self):
+    def accept(self, user):
         self.is_accepted = True
         self.has_result = True
+        self.responser = user.staff
+        self.price = self.get_price()
         self.save()
         car = self.car
         car.renter = self.requester
         car.rent_end_time = self.rent_end_time
         car.rent_start_time = self.rent_start_time
         car.save()
-        price = self.get_price()
-        self.requester.change_credit(-price)
-        car.owner.change_credit(price)
+        self.requester.change_credit(-self.price)
+        car.owner.change_credit(self.price)
 
-    def reject(self):
+    def reject(self, user):
         self.is_accepted = False
         self.has_result = True
+        self.responser = user.staff
+        self.price = self.get_price()
         self.save()
 
     def get_price(self):

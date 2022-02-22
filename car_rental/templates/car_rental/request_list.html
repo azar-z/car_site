@@ -15,7 +15,7 @@
     <div class="alert alert-danger" ><strong>{{ error_message}}</strong></div>
 {% endif %}
 
-{%if  user.isCarExhibition %}
+{%if  user.is_staff %}
     {% if requests %}
         <div class="alert alert-info"> Please accept or reject these requests:</div>
         <form action="{% url 'car_rental:answer_requests' %}" method="post">
@@ -86,7 +86,7 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td><a href="{% url 'car_rental:car' request.car.id %}">{{ request.car.car_type }}</a></td>
-                <td>{{ request.car.owner.username }}</td>
+                <td>{{ request.car.owner.name }}</td>
                 <td>{{ request.rent_start_time }}</td>
                 <td>{{ request.rent_end_time }}</td>
                 <td>{{ request.get_price }}</td>

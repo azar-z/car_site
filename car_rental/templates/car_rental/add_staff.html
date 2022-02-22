@@ -1,0 +1,21 @@
+{% extends 'car_rental/base.html' %}
+{% load static %}
+{% block style %}
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
+{% endblock %}
+
+{% block title %} Add Staff{% endblock %}
+
+{% block content %}
+    <div class="container" align="center">
+    <h1>Add a new staff</h1>
+    <form method="post">
+  {% csrf_token %}
+    <fieldset style="width: 70%">
+    <legend>Enter the following information:</legend>
+    <table class="table form-table">{{ form.as_table }}</table>
+    <input type="submit" class="btn btn-info" value="Create" style="width: 50%">
+    </fieldset>
+</form>
+    </div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'car_rental/base.html' %}
+{% load static %}
+
+{% block title %} Staff Details {% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Staff number {{ staff.id }}</h1>
+
+        <table class="table table-striped table-hover info-table">
+            <tr>
+                <td>Username</td>
+                <td>{{ staff.user.username }}</td>
+            </tr>
+            <tr>
+                <td>Type</td>
+                <td>{% if staff.is_senior %} Senior {% else %} Normal {% endif %}</td>
+            </tr>
+            <tr>
+                <td>User ID</td>
+                <td>{{ staff.user.id }}</td>
+            </tr>
+
+        </table>
+        <a class="btn btn-info" href="{% url 'car_rental:delete_staff' staff.user.id %}" role="button" style="width:19%">Remove This Staff</a>
+</div>
+{% endblock %}

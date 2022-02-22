@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, update_session_auth_hash, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -10,7 +10,8 @@ from django.utils.decorators import method_decorator
 from django.views import generic
 
 from . import decorators
-from .models import Car, RentRequest, User
+from .forms import StaffCreationForm
+from .models import Car, RentRequest, User, Exhibition, Staff
 from . import forms as my_forms
 
 
@@ -38,8 +39,8 @@ class CarListView(generic.ListView):
 
     def get_queryset(self):
         current_user = get_object_or_404(User, id=self.request.user.id)
-        if current_user.isCarExhibition:
-            return current_user.cars_owned.all()
+        if current_user.is_staff:
+            return current_user.staff.exhibition.cars_owned.all()
         else:
             return Car.objects.exclude(rent_end_time__gt=timezone.now()).filter(needs_repair=False)
 
@@ -78,23 +79,23 @@ class RentRequestListView(generic.ListView):
 
     def get_queryset(self):
         current_user = get_object_or_404(User, id=self.request.user.id)
-        if current_user.isCarExhibition:
-            return current_user.get_all_requests_of_exhibition()
+        if current_user.is_staff:
+            return current_user.staff.exhibition.get_all_requests().order_by('rent_start_time').filter(has_result=False)
         return current_user.rentrequest_set.all().order_by('-rent_start_time')
 
 
 @login_required()
 def answer_requests_view(request):
     user = get_object_or_404(User, id=request.user.id)
-    if user.isCarExhibition and request.method == 'POST':
-        unanswered_requests = user.get_all_requests_of_exhibition()
+    if user.is_staff and request.method == 'POST':
+        unanswered_requests = user.staff.exhibition.get_all_requests()
         try:
             for unanswered_request in unanswered_requests:
                 answer = request.POST[str(unanswered_request.id)]
                 if answer == 'yes':
-                    unanswered_request.accept()
+                    unanswered_request.accept(user)
                 else:
-                    unanswered_request.reject()
+                    unanswered_request.reject(user)
 
         except KeyError:
             return render(request, 'car_rental/request_list.html',
@@ -124,6 +125,7 @@ def change_password(request):
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.staff_is_senior, name='dispatch')
 class ChangeCreditView(generic.FormView):
     template_name = 'car_rental/change_credit.html'
     form_class = my_forms.ChangeCreditForm
@@ -131,8 +133,7 @@ class ChangeCreditView(generic.FormView):
     def form_valid(self, form):
         delta_credit = form.cleaned_data['delta_credit']
         current_user = get_object_or_404(User, id=self.request.user.id)
-        current_user.credit += delta_credit
-        current_user.save()
+        current_user.change_credit(delta_credit)
         return HttpResponseRedirect(reverse('car_rental:profile'))
 
 
@@ -146,6 +147,13 @@ def logout_view(request):
     return HttpResponseRedirect(reverse('car_rental:home'))
 
 
+def create_exhibition(user):
+    exhibition = Exhibition.objects.create(name=user.username)
+    exhibition.save()
+    senior_staff = Staff.objects.create(exhibition=exhibition, is_senior=True, user=user)
+    senior_staff.save()
+
+
 def signup(request):
     if request.method == 'POST':
         form = my_forms.SignUpForm(request.POST)
@@ -156,8 +164,7 @@ def signup(request):
             user_type = form.cleaned_data.get('user_type')
             user = authenticate(username=username, password=raw_password)
             if user_type == 'EX':
-                user.isCarExhibition = True
-            user.save()
+                create_exhibition(user)
             login(request, user)
             return HttpResponseRedirect(reverse('car_rental:home'))
     else:
@@ -166,7 +173,7 @@ def signup(request):
 
 
 @method_decorator(login_required, name='dispatch')
-@method_decorator(decorators.user_is_exhibition, name='dispatch')
+@method_decorator(decorators.user_is_staff, name='dispatch')
 class AddCarView(generic.CreateView):
     model = Car
     template_name = 'car_rental/add_car.html'
@@ -175,12 +182,12 @@ class AddCarView(generic.CreateView):
     def form_valid(self, form):
         response = super(AddCarView, self).form_valid(form)
         current_user = User.objects.get(id=self.request.user.id)
-        self.object.owner = current_user
-        self.object.save()
+        self.object.set_owner(current_user.staff.exhibition)
         return response
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.user_is_staff, name='dispatch')
 class EditCarView(generic.UpdateView):
     model = Car
     template_name = 'car_rental/edit_car.html'
@@ -188,7 +195,7 @@ class EditCarView(generic.UpdateView):
 
     def get_queryset(self):
         current_user = get_current_user(self.request)
-        return current_user.cars_owned.filter(rent_end_time__lte=timezone.now())
+        return current_user.staff.exhibition.cars_owned.filter(rent_end_time__lte=timezone.now())
 
 
 @method_decorator(login_required, name='dispatch')
@@ -201,7 +208,7 @@ class DeleteCarView(generic.DeleteView):
 
     def get_queryset(self):
         current_user = get_current_user(self.request)
-        return current_user.cars_owned.filter(rent_end_time__lte=timezone.now())
+        return current_user.staff.exhibition.cars_owned.filter(rent_end_time__lte=timezone.now())
 
 
 @method_decorator(login_required, name='dispatch')
@@ -213,10 +220,9 @@ class UserDetailView(generic.DetailView):
     def get_queryset(self):
         current_user = get_current_user(self.request)
         queryset = User.objects.none()
-        for car in current_user.cars_owned.all():
-            for rent_request in car.rentrequest_set.all():
-                requester = rent_request.requester
-                queryset |= User.objects.filter(id=requester.id)
+        if current_user.is_staff:
+            for rent_request in current_user.staff.exhibition.get_all_requests():
+                queryset |= User.objects.filter(id=rent_request.requester.id)
         return queryset
 
 
@@ -239,7 +245,71 @@ class NeedRepairCarView(generic.UpdateView):
 
     def get_queryset(self):
         current_user = get_current_user(self.request)
-        if current_user.isCarExhibition:
-            return current_user.cars_owned.all()
+        if current_user.is_staff:
+            return current_user.staff.exhibition.cars_owned.all()
         else:
             return current_user.cars_rented.filter(needs_repair=True)
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.user_is_staff, name='dispatch')
+@method_decorator(decorators.staff_is_senior, name='dispatch')
+class CreateStaffView(generic.CreateView):
+    model = User
+    form_class = StaffCreationForm
+    template_name = 'car_rental/add_staff.html'
+
+    def get_success_url(self):
+        return reverse('car_rental:staff')
+
+    def get_queryset(self):
+        return User.objects.all()
+
+    def form_valid(self, form):
+        current_user = self.request.user
+        response = super(CreateStaffView, self).form_valid(form)
+        exhibition = current_user.staff.exhibition
+        staff = Staff.objects.create(user=self.object, exhibition=exhibition)
+        if form.cleaned_data.get('staff_type') == 'S':
+            staff.is_senior = True
+        staff.save()
+        return response
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.user_is_staff, name='dispatch')
+@method_decorator(decorators.staff_is_senior, name='dispatch')
+class StaffListView(generic.ListView):
+    model = Staff
+    template_name = 'car_rental/staff_list.html'
+    context_object_name = 'staff_list'
+
+    def get_queryset(self):
+        return self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.user_is_staff, name='dispatch')
+@method_decorator(decorators.staff_is_senior, name='dispatch')
+class StaffDetailView(generic.DetailView):
+    model = Staff
+    template_name = 'car_rental/staff_detail.html'
+
+    def get_queryset(self):
+        return self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.user_is_staff, name='dispatch')
+@method_decorator(decorators.staff_is_senior, name='dispatch')
+class StaffDeleteView(generic.DeleteView):
+    model = User
+    template_name = 'car_rental/delete_staff.html'
+
+    def get_success_url(self):
+        return reverse('car_rental:staff')
+
+    def get_queryset(self):
+        staff_queryset = self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)
+        user_queryset = User.objects.filter(staff__in=staff_queryset)
+        return user_queryset

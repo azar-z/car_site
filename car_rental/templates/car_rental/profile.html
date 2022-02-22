@@ -20,25 +20,43 @@
      <tr>
          <td>Type</td>
          <td>
-             {% if user.isCarExhibition %} Exhibition {% else %} Renter {% endif %}
+             {% if user.is_staff %}
+                 Exhibition{% if user.staff.is_senior %} Senior{% endif %} Staff
+             {% else %} Renter {% endif %}
          </td>
      </tr>
-
-     <tr>
-         <td>Credit</td>
-         <td>{{ user.credit }}</td>
-     </tr>
-
-     <tr>
-         <td>ID</td>
+      <tr>
+         <td>User ID</td>
          <td>{{ user.id }}</td>
      </tr>
+{% if user.is_staff%}
+     <tr>
+         <td>Exhibition</td>
+         <td>{{ user.staff.exhibition.name }}</td>
+     </tr>
+     <tr>
+         <td>Exhibition ID</td>
+         <td>{{ user.staff.exhibition.id }}</td>
+     </tr>
+{% endif %}
+{% if not user.is_staff or user.staff.is_senior%}
+     <tr>
+         {% if user.is_staff %}
+             <td>Exhibition Credit</td>
+             <td>{{ user.staff.exhibition.credit }}</td>
+             {% else %}
+             <td>Credit</td>
+             <td>{{ user.credit }}</td>
+             {% endif %}
+     </tr>
+{% endif %}
 
  </table>
 
 <a class="btn btn-info" href="{% url 'car_rental:change_password' %}" role="button" style="width:19%">Change Password</a> &nbsp;
+{% if not user.is_staff or user.staff.is_senior%}
 <a class="btn btn-info" href="{% url 'car_rental:change_credit' %}" role="button" style="width:19%">Change Credit</a>
-
+{% endif %}
 
 {% if success_message %}
 <div class="alert alert-success" style="margin-top: 20px">{{ success_message }}</div>

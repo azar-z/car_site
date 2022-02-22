@@ -25,10 +25,18 @@
                 <a class="nav-link" href="{% url 'car_rental:requests' %}">Requests</a>
             </li>
 
-    {% if user.isCarExhibition %}
+    {% if user.is_staff %}
         <li class="nav-item {% if url_name == 'add_car' %}active{% endif %}">
                 <a class="nav-link" href="{% url 'car_rental:add_car' %}">Add Car</a>
         </li>
+        {% if user.staff.is_senior %}
+        <li class="nav-item {% if url_name == 'staff'%}active{% endif %}">
+            <a class="nav-link" href="{% url 'car_rental:staff' %}">Staff</a>
+        </li>
+        <li class="nav-item {% if url_name == 'add_staff'%}active{% endif %}">
+            <a class="nav-link" href="{% url 'car_rental:add_staff' %}">Add Staff</a>
+        </li>
+        {% endif %}
     {% endif %}
     </ul>
     <ul class="navbar-nav ml-auto">
