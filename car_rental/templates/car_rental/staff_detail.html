@@ -5,6 +5,7 @@
 
 {% block style %}
     <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/request_list.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -24,8 +25,43 @@
                 <td>User ID</td>
                 <td>{{ staff.user.id }}</td>
             </tr>
-
         </table>
+
+{% if staff.rentrequest_set.all %}
+        <h1>Answered Requests</h1>
+
+<table class="table table-striped table-hover" style="margin-top: 20px">
+        <thead>
+        <tr>
+            <td>#</td>
+            <td>Model</td>
+            <td>Start Time</td>
+            <td>End Time</td>
+            <td>Price</td>
+            <td>Result</td>
+        </tr>
+        </thead>
+        <tbody>
+        {% for request in staff.rentrequest_set.all %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><a href="{% url 'car_rental:car' request.car.id %}">{{ request.car.car_type }}</a></td>
+                <td>{{ request.rent_start_time }}</td>
+                <td>{{ request.rent_end_time }}</td>
+                <td>{{ request.get_price }}</td>
+                {% if request.is_accepted %}
+                    <td style="color: darkgreen">Accepted</td>
+                {% else %}
+                    <td style="color: darkred">Rejected</td>
+                {% endif %}
+            </tr>
+         {% endfor %}
+        </tbody>
+        </table>
+{% else %}
+       <div class="alert alert-danger"><strong>This staff has answered no requests till now.</strong></div>
+{% endif %}
+
         <a class="btn btn-info" href="{% url 'car_rental:delete_staff' staff.user.id %}" role="button" style="width:19%">Remove This Staff</a>
 </div>
 {% endblock %}

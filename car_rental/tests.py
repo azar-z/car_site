@@ -94,8 +94,10 @@ def create_rented_car(car_type='type1', renter=None, owner=None, days=1, ex_name
 class CarListViewTest(TestCase):
 
     def test_not_login(self):
-        response = self.client.post(reverse('car_rental:cars'))
-        self.assertRedirects(response, reverse('car_rental:login') + "?next=" + reverse('car_rental:cars'))
+        car = create_car()
+        response = self.client.get(reverse('car_rental:cars'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, car.car_type)
 
     def test_no_car_exists(self):
         login_a_user(self.client)
@@ -165,10 +167,10 @@ class CarListViewTest(TestCase):
 class CarDetailTest(TestCase):
 
     def test_not_login(self):
-        create_car()
+        car = create_car()
         response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
-        self.assertRedirects(response,
-                             reverse('car_rental:login') + "?next=" + str(reverse('car_rental:car', kwargs={'pk': 1})))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, car.car_type)
 
     def test_no_car_with_this_id(self):
         login_a_user(self.client)
@@ -265,9 +267,9 @@ class RentRequestListViewTest(TestCase):
 
     def test_not_login(self):
         create_car()
-        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        response = self.client.get(reverse('car_rental:requests'))
         self.assertRedirects(response,
-                             reverse('car_rental:login') + "?next=" + str(reverse('car_rental:car', kwargs={'pk': 1})))
+                             reverse('car_rental:login') + "?next=" + reverse('car_rental:requests'))
 
     def test_exhibition_no_request(self):
         staff_user = login_a_user(self.client, is_staff=True)
@@ -360,8 +362,8 @@ class RentRequestListViewTest(TestCase):
 class AnswerRequestView(TestCase):
 
     def test_not_login(self):
-        response = self.client.post(reverse('car_rental:cars'))
-        self.assertRedirects(response, reverse('car_rental:login') + "?next=" + reverse('car_rental:cars'))
+        response = self.client.post(reverse('car_rental:answer_requests'))
+        self.assertRedirects(response, reverse('car_rental:login') + "?next=" + reverse('car_rental:answer_requests'))
 
     def test_not_exhibition_user(self):
         user = login_a_user(self.client)

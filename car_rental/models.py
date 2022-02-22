@@ -114,6 +114,9 @@ class RentRequest(models.Model):
         self.save()
 
     def get_price(self):
-        delta_time = self.rent_end_time - self.rent_start_time
-        delta_hours = delta_time.days * 24 + ceil(delta_time.seconds/3600)
-        return delta_hours * self.car.price_per_hour
+        if self.price == 0:
+            delta_time = self.rent_end_time - self.rent_start_time
+            delta_hours = delta_time.days * 24 + ceil(delta_time.seconds/3600)
+            return delta_hours * self.car.price_per_hour
+        else:
+            return self.price

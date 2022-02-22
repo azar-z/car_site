@@ -81,7 +81,9 @@
             {% endif %}
             {% endif %}
         </table>
-
+{% if user.is_anonymous %}
+    <div class="alert alert-warning"> <strong>Login to continue!</strong></div>
+{% else %}
         {% if not car.is_rented and car.owner != user.staff.exhibition and not car.needs_repair%}
         <form action="{% url 'car_rental:rent_request' car.id %}" method="post">
         {% csrf_token %}
@@ -115,7 +117,7 @@
         </fieldset>
         </form>
     {% endif %}
-
+{% endif %}
     {% if not car.is_rented and car.owner == user.staff.exhibition%}
         <a class="btn btn-info" href="{% url 'car_rental:edit_car' car.id %}" role="button" style="width:19%">Change Price</a>
         <a class="btn btn-info" href="{% url 'car_rental:delete_car' car.id %}" role="button" style="width:19%">Remove</a>

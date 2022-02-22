@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, update_session_auth_hash, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.contrib.auth.forms import PasswordChangeForm
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -13,10 +13,6 @@ from . import decorators
 from .forms import StaffCreationForm
 from .models import Car, RentRequest, User, Exhibition, Staff
 from . import forms as my_forms
-
-
-def get_current_user(request):
-    return User.objects.get(id=request.user.id)
 
 
 class LoginView(generic.FormView):
@@ -31,21 +27,19 @@ class LoginView(generic.FormView):
         return HttpResponseRedirect(reverse('car_rental:home'))
 
 
-@method_decorator(login_required, name='dispatch')
 class CarListView(generic.ListView):
     template_name = 'car_rental/car_list.html'
     model = Car
     context_object_name = 'cars'
 
     def get_queryset(self):
-        current_user = get_object_or_404(User, id=self.request.user.id)
+        current_user = self.request.user
         if current_user.is_staff:
             return current_user.staff.exhibition.cars_owned.all()
         else:
             return Car.objects.exclude(rent_end_time__gt=timezone.now()).filter(needs_repair=False)
 
 
-@method_decorator(login_required, name='dispatch')
 class CarDetailView(generic.DetailView):
     model = Car
     context_object_name = 'car'
@@ -78,7 +72,7 @@ class RentRequestListView(generic.ListView):
     context_object_name = 'requests'
 
     def get_queryset(self):
-        current_user = get_object_or_404(User, id=self.request.user.id)
+        current_user = self.request.user
         if current_user.is_staff:
             return current_user.staff.exhibition.get_all_requests().order_by('rent_start_time').filter(has_result=False)
         return current_user.rentrequest_set.all().order_by('-rent_start_time')
@@ -86,7 +80,7 @@ class RentRequestListView(generic.ListView):
 
 @login_required()
 def answer_requests_view(request):
-    user = get_object_or_404(User, id=request.user.id)
+    user = request.user
     if user.is_staff and request.method == 'POST':
         unanswered_requests = user.staff.exhibition.get_all_requests()
         try:
@@ -132,7 +126,7 @@ class ChangeCreditView(generic.FormView):
 
     def form_valid(self, form):
         delta_credit = form.cleaned_data['delta_credit']
-        current_user = get_object_or_404(User, id=self.request.user.id)
+        current_user = self.request.user
         current_user.change_credit(delta_credit)
         return HttpResponseRedirect(reverse('car_rental:profile'))
 
@@ -194,7 +188,7 @@ class EditCarView(generic.UpdateView):
     fields = ['price_per_hour']
 
     def get_queryset(self):
-        current_user = get_current_user(self.request)
+        current_user = self.request.user
         return current_user.staff.exhibition.cars_owned.filter(rent_end_time__lte=timezone.now())
 
 
@@ -207,7 +201,7 @@ class DeleteCarView(generic.DeleteView):
         return reverse('car_rental:cars')
 
     def get_queryset(self):
-        current_user = get_current_user(self.request)
+        current_user = self.request.user
         return current_user.staff.exhibition.cars_owned.filter(rent_end_time__lte=timezone.now())
 
 
@@ -218,7 +212,7 @@ class UserDetailView(generic.DetailView):
     template_name = 'car_rental/user_info.html'
 
     def get_queryset(self):
-        current_user = get_current_user(self.request)
+        current_user = self.request.user
         queryset = User.objects.none()
         if current_user.is_staff:
             for rent_request in current_user.staff.exhibition.get_all_requests():
@@ -235,7 +229,7 @@ class NeedRepairCarView(generic.UpdateView):
     def form_valid(self, form):
         response = super(NeedRepairCarView, self).form_valid(form)
         car = self.object
-        if car.renter == get_current_user(self.request):
+        if car.renter == self.request.user:
             if car.needs_repair:
                 car.renter.change_credit(-100)
                 car.owner.change_credit(100)
@@ -244,7 +238,7 @@ class NeedRepairCarView(generic.UpdateView):
         return response
 
     def get_queryset(self):
-        current_user = get_current_user(self.request)
+        current_user = self.request.user
         if current_user.is_staff:
             return current_user.staff.exhibition.cars_owned.all()
         else:
@@ -313,3 +307,5 @@ class StaffDeleteView(generic.DeleteView):
         staff_queryset = self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)
         user_queryset = User.objects.filter(staff__in=staff_queryset)
         return user_queryset
+
+
