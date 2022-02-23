@@ -5,61 +5,106 @@
 
 {% block style %}
     <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/request_list.css' %}">
+
 {% endblock %}
 
 
 {% block content %}
-<div class="container">
-    <h1>Your Profile</h1>
- <table class="table table-striped table-hover info-table">
-     <tr>
-         <td>Username</td>
-         <td>{{ user.username }}</td>
-     </tr>
+    <div class="container">
+        <h1>Your Profile</h1>
+        <table class="table table-striped table-hover info-table">
+            <tr>
+                <td>Username</td>
+                <td>{{ user.username }}</td>
+            </tr>
 
-     <tr>
-         <td>Type</td>
-         <td>
-             {% if user.is_staff %}
-                 Exhibition{% if user.staff.is_senior %} Senior{% endif %} Staff
-             {% else %} Renter {% endif %}
-         </td>
-     </tr>
-      <tr>
-         <td>User ID</td>
-         <td>{{ user.id }}</td>
-     </tr>
-{% if user.is_staff%}
-     <tr>
-         <td>Exhibition</td>
-         <td>{{ user.staff.exhibition.name }}</td>
-     </tr>
-     <tr>
-         <td>Exhibition ID</td>
-         <td>{{ user.staff.exhibition.id }}</td>
-     </tr>
-{% endif %}
-{% if not user.is_staff or user.staff.is_senior%}
-     <tr>
-         {% if user.is_staff %}
-             <td>Exhibition Credit</td>
-             <td>{{ user.staff.exhibition.credit }}</td>
-             {% else %}
-             <td>Credit</td>
-             <td>{{ user.credit }}</td>
-             {% endif %}
-     </tr>
-{% endif %}
+            <tr>
+                <td>Type</td>
+                <td>
+                    {% if user.is_staff %}
+                        Exhibition{% if user.staff.is_senior %} Senior{% endif %} Staff
+                    {% else %} Renter {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>User ID</td>
+                <td>{{ user.id }}</td>
+            </tr>
+            {% if user.is_staff %}
+                <tr>
+                    <td>Exhibition</td>
+                    <td>{{ user.staff.exhibition.name }}</td>
+                </tr>
+                <tr>
+                    <td>Exhibition ID</td>
+                    <td>{{ user.staff.exhibition.id }}</td>
+                </tr>
+            {% endif %}
+            {% if not user.is_staff or user.staff.is_senior %}
+                <tr>
+                    {% if user.is_staff %}
+                        <td>Exhibition Credit</td>
+                        <td>{{ user.staff.exhibition.credit }}</td>
+                    {% else %}
+                        <td>Credit</td>
+                        <td>{{ user.credit }}</td>
+                    {% endif %}
+                </tr>
+            {% endif %}
 
- </table>
+        </table>
 
-<a class="btn btn-info" href="{% url 'car_rental:change_password' %}" role="button" style="width:19%">Change Password</a> &nbsp;
-{% if not user.is_staff or user.staff.is_senior%}
-<a class="btn btn-info" href="{% url 'car_rental:change_credit' %}" role="button" style="width:19%">Change Credit</a>
-{% endif %}
+        <a class="btn btn-info" href="{% url 'car_rental:change_password' %}" role="button" style="width:19%">Change Password</a> &nbsp;
+        {% if not user.is_staff or user.staff.is_senior %}
+            <a class="btn btn-info" href="{% url 'car_rental:change_credit' %}" role="button" style="width:19%">Change Credit</a>
+        {% endif %}
 
-{% if success_message %}
-<div class="alert alert-success" style="margin-top: 20px">{{ success_message }}</div>
-{% endif %}
- </div>
+        {% if success_message %}
+            <div class="alert alert-success" style="margin-top: 20px">{{ success_message }}</div>
+        {% endif %}
+
+
+
+        {% if user.staff.rentrequest_set.all %}
+            <h1>Answered Requests</h1>
+
+            <table class="table table-striped table-hover" style="margin-top: 20px">
+                <thead>
+                <tr>
+                    <td>#</td>
+                    <td>Model</td>
+                    <td>Start Time</td>
+                    <td>End Time</td>
+                    <td>Price</td>
+                    <td>Result</td>
+                </tr>
+                </thead>
+                <tbody>
+                {% for request in user.staff.rentrequest_set.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            {% if request.car %}
+                            <a href="{% url 'car_rental:car' request.car.id %}">{{ request.car.car_type }}</a>
+                            {% else %}
+                            Deleted Car
+                            {% endif %}
+                        </td>
+                        <td>{{ request.rent_start_time }}</td>
+                        <td>{{ request.rent_end_time }}</td>
+                        <td>{{ request.get_price }}</td>
+                        {% if request.is_accepted %}
+                            <td style="color: darkgreen">Accepted</td>
+                        {% else %}
+                            <td style="color: darkred">Rejected</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="alert alert-danger" style="margin-top: 10px"><strong>You have answered no requests till now.</strong></div>
+        {% endif %}
+    </div>
 {% endblock %}

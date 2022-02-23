@@ -85,7 +85,13 @@
         {% for request in requests %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td><a href="{% url 'car_rental:car' request.car.id %}">{{ request.car.car_type }}</a></td>
+                <td>
+                    {% if request.car %}
+                    <a href="{% url 'car_rental:car' request.car.id %}">{{ request.car.car_type }}</a>
+                    {% else %}
+                    Deleted Car
+                    {% endif %}
+                </td>
                 <td>{{ request.car.owner.name }}</td>
                 <td>{{ request.rent_start_time }}</td>
                 <td>{{ request.rent_end_time }}</td>

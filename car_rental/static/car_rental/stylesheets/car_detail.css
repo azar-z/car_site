@@ -31,3 +31,8 @@ fieldset{
 .form-error{
   color: darkred;
 }
+
+img {
+  margin: 10px;
+  height: 150px;
+}

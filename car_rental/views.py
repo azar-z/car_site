@@ -52,17 +52,16 @@ class CarDetailView(generic.DetailView):
 @login_required()
 def rent_request_view(request, pk):
     car = get_object_or_404(Car, id=pk)
-    try:
-        rent_start_time = request.POST['rent_start_time']
-        rent_end_time = request.POST['rent_end_time']
-    except KeyError:
-        return render(request, 'car_rental/car_detail.html',
-                      {'car': car, 'error_message': "Please fill the form completely."})
-    else:
-        rent_req = RentRequest.objects.create(car=car, requester=request.user, rent_end_time=rent_end_time,
-                                              rent_start_time=rent_start_time)
-        rent_req.save()
-    return HttpResponseRedirect(reverse('car_rental:requests'))
+    if request.method == 'POST':
+        form = my_forms.RentRequestForm(request.POST)
+        if form.is_valid():
+            rent_start_time = form.cleaned_data.get('rent_start_time')
+            rent_end_time = form.cleaned_data.get('rent_end_time')
+            rent_req = RentRequest.objects.create(car=car, requester=request.user, rent_end_time=rent_end_time,
+                                                  rent_start_time=rent_start_time)
+            rent_req.save()
+            return HttpResponseRedirect(reverse('car_rental:requests'))
+    return HttpResponseRedirect(reverse('car_rental:car', kwargs={'pk': pk}))
 
 
 @method_decorator(login_required, name='dispatch')
@@ -82,7 +81,7 @@ class RentRequestListView(generic.ListView):
 def answer_requests_view(request):
     user = request.user
     if user.is_staff and request.method == 'POST':
-        unanswered_requests = user.staff.exhibition.get_all_requests()
+        unanswered_requests = user.staff.exhibition.get_all_requests().filter(has_result=False)
         try:
             for unanswered_request in unanswered_requests:
                 answer = request.POST[str(unanswered_request.id)]
@@ -171,7 +170,7 @@ def signup(request):
 class AddCarView(generic.CreateView):
     model = Car
     template_name = 'car_rental/add_car.html'
-    fields = ['car_type', 'plate', 'price_per_hour']
+    fields = ['car_type', 'plate', 'price_per_hour', 'image']
 
     def form_valid(self, form):
         response = super(AddCarView, self).form_valid(form)
@@ -307,5 +306,3 @@ class StaffDeleteView(generic.DeleteView):
         staff_queryset = self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)
         user_queryset = User.objects.filter(staff__in=staff_queryset)
         return user_queryset
-
-

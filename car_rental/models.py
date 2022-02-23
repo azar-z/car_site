@@ -62,6 +62,7 @@ class Car(models.Model):
     rent_start_time = models.DateTimeField('Start Time', default=timezone.now)
     rent_end_time = models.DateTimeField('End Time', default=timezone.now)
     needs_repair = models.BooleanField(default=False)
+    image = models.ImageField(upload_to='cars', null=True, blank=True, default='default.jpg')
 
     def __str__(self):
         return str(self.pk) + ". " + self.car_type
@@ -85,7 +86,7 @@ class RentRequest(models.Model):
     price = models.IntegerField(default=0)
     is_accepted = models.BooleanField(default=False)
     has_result = models.BooleanField(default=False)
-    car = models.ForeignKey(Car, on_delete=models.CASCADE)
+    car = models.ForeignKey(Car, on_delete=models.SET_NULL, null=True)
     requester = models.ForeignKey(User, on_delete=models.CASCADE)
     rent_start_time = models.DateTimeField('Start Time', default=timezone.now)
     rent_end_time = models.DateTimeField('End Time', default=get_tomorrow)
