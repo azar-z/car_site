@@ -1,5 +1,6 @@
 import datetime
 
+from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -49,14 +50,14 @@ class LoginViewTest(TestCase):
         user.is_active = False
         user.save()
         response = self.client.post(reverse('car_rental:login'), data)
-        self.assertFormError(response, 'form', None, "Username and Password didn't match.")
+        self.assertContains(response, "Please enter a correct username and password.")
 
     def test_login_not_existing_user(self):
         username = 'Farhad'
         password = '1111'
         data = {'username': username, 'password': password}
         response = self.client.post(reverse('car_rental:login'), data)
-        self.assertFormError(response, 'form', None, "Username and Password didn't match.")
+        self.assertContains(response, "Please enter a correct username and password.")
 
 
 def login_a_user(client, user=None, username=None, password='1111', is_staff=False, exhibition=None, ex_name='ex1'):
@@ -218,6 +219,7 @@ class CarDetailTest(TestCase):
 
     def test_rented_car_by_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_car')
         owner = staff_user.staff.exhibition
         car = create_rented_car(owner=owner)
         response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
@@ -233,6 +235,33 @@ class CarDetailTest(TestCase):
         self.assertContains(response, car.rent_start_time.day)
         self.assertContains(response, car.renter.username)
         self.assertContains(response, 'Needs Repair?')
+        self.assertNotContains(response, 'Change Price')
+        self.assertNotContains(response, 'Remove')
+
+    def test_not_rented_car_by_staff(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_car')
+        owner = staff_user.staff.exhibition
+        car = create_car(owner=owner)
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertContains(response, car.car_type)
+        self.assertContains(response, 'free')
+        self.assertContains(response, 'Status')
+        self.assertNotContains(response, 'Want to rent this car?')
+        self.assertContains(response, 'Needs Repair?')
+        self.assertContains(response, 'Change Price')
+        self.assertContains(response, 'Remove')
+
+
+    def test_staff_car_permission_not_given(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        owner = staff_user.staff.exhibition
+        car = create_car(owner=owner)
+        response = self.client.get(reverse('car_rental:car', kwargs={'pk': 1}))
+        self.assertContains(response, car.car_type)
+        self.assertNotContains(response, 'Needs Repair?')
+        self.assertNotContains(response, 'Change Price')
+        self.assertNotContains(response, 'Remove')
 
     def test_car_needs_repair(self):
         login_a_user(self.client)
@@ -368,10 +397,24 @@ class AnswerRequestView(TestCase):
     def test_not_exhibition_user(self):
         user = login_a_user(self.client)
         response = self.client.get(reverse('car_rental:answer_requests'))
-        self.assertRedirects(response, reverse('car_rental:requests'))
+        self.assertEqual(response.status_code, 403)
+
+
+    def test_no_request_permission(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        owner = staff_user.staff.exhibition
+        car = create_car(owner=owner)
+        car.price_per_hour = 100
+        car.save()
+        requester = create_user('user1')
+        rent_request = create_request(requester, car, timezone.now(), timezone.now() + datetime.timedelta(hours=10))
+        response = self.client.post(reverse('car_rental:answer_requests'), {'1': 'no'})
+        self.assertEqual(response.status_code, 403)
+
 
     def test_not_answered_request(self):
         staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_answer_request')
         owner = staff_user.staff.exhibition
         car = create_car(owner=owner)
         requester = create_user('user1')
@@ -384,6 +427,7 @@ class AnswerRequestView(TestCase):
 
     def test_rejected_request(self):
         staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_answer_request')
         owner = staff_user.staff.exhibition
         car = create_car(owner=owner)
         car.price_per_hour = 100
@@ -402,6 +446,7 @@ class AnswerRequestView(TestCase):
 
     def test_accepted_request(self):
         staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_answer_request')
         owner = staff_user.staff.exhibition
         car = create_car(owner=owner)
         car.price_per_hour = 100
@@ -425,7 +470,7 @@ class ProfileViewTest(TestCase):
         response = self.client.get(reverse('car_rental:profile'))
         self.assertRedirects(response, reverse('car_rental:login') + "?next=" + reverse('car_rental:profile'))
 
-    def test_normal_staff(self):
+    def test_no_credit_permission_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
         exhibition = staff_user.staff.exhibition
         response = self.client.get(reverse('car_rental:profile'))
@@ -438,16 +483,15 @@ class ProfileViewTest(TestCase):
         self.assertNotContains(response, 'Change Credit')
         self.assertNotContains(response, 'Exhibition Credit')
 
-    def test_senior_staff(self):
+    def test_credit_permission_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
-        staff_user.staff.is_senior = True
-        staff_user.staff.save()
+        staff_user.staff.add_permissions('can_access_credit')
         exhibition = staff_user.staff.exhibition
         exhibition.credit = 2535
         exhibition.save()
         response = self.client.get(reverse('car_rental:profile'))
         self.assertContains(response, staff_user.username)
-        self.assertContains(response, "Exhibition Senior Staff")
+        self.assertContains(response, "Exhibition Staff")
         self.assertContains(response, exhibition.name)
         self.assertContains(response, 'Exhibition ID')
         self.assertContains(response, 'User ID')
@@ -458,6 +502,8 @@ class ProfileViewTest(TestCase):
 
     def test_renter(self):
         renter = login_a_user(self.client)
+        permission = Permission.objects.get(codename='can_access_credit')
+        renter.user_permissions.add(permission)
         response = self.client.get(reverse('car_rental:profile'))
         self.assertContains(response, renter.username)
         self.assertContains(response, 'Renter')
@@ -500,17 +546,18 @@ class CreditChangeViewTest(TestCase):
 
     def test_changes_correctly(self):
         user = login_a_user(self.client)
+        permission = Permission.objects.get(codename='can_access_credit')
+        user.user_permissions.add(permission)
         self.assertEqual(user.credit, 0)
         response = self.client.post(reverse('car_rental:change_credit'), {'delta_credit': 100}, follow=True)
         user.refresh_from_db()
         self.assertTrue(user.credit, 100)
         self.assertRedirects(response, reverse('car_rental:profile'))
 
-    def test_changes_correctly_for_senior_staff(self):
+    def test_changes_correctly_for_permission_credit_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
         exhibition = staff_user.staff.exhibition
-        staff_user.staff.is_senior = True
-        staff_user.staff.save()
+        staff_user.staff.add_permissions('can_access_credit')
         self.assertEqual(exhibition.credit, 0)
         self.assertEqual(staff_user.credit, 0)
         response = self.client.post(reverse('car_rental:change_credit'), {'delta_credit': 100}, follow=True)
@@ -520,7 +567,7 @@ class CreditChangeViewTest(TestCase):
         self.assertEqual(exhibition.credit, 100)
         self.assertRedirects(response, reverse('car_rental:profile'))
 
-    def test_permission_denied_for_normal_staff(self):
+    def test_permission_denied_for_no_credit_permission_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
         exhibition = staff_user.staff.exhibition
         self.assertEqual(exhibition.credit, 0)
@@ -544,14 +591,22 @@ class LogoutViewTest(TestCase):
 
 class AddCarViewTest(TestCase):
 
-    def test_successful_car_add(self):
+    def test_successful_car_add_for_car_permission_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_car')
         exhibition = staff_user.staff.exhibition
         response = self.client.post(reverse('car_rental:add_car'),
                                     {'car_type': 'type1', 'plate': '1234', 'price_per_hour': '100'}, follow=True)
         exhibition.refresh_from_db()
         self.assertRedirects(response, reverse('car_rental:car', kwargs={'pk': '1'}))
         self.assertEqual(exhibition.cars_owned.get(id=1).car_type, 'type1')
+
+    def test_access_denied_for_not_car_permission_staff(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        exhibition = staff_user.staff.exhibition
+        response = self.client.post(reverse('car_rental:add_car'),
+                                    {'car_type': 'type1', 'plate': '1234', 'price_per_hour': '100'}, follow=True)
+        self.assertEqual(response.status_code, 403)
 
     def test_non_exhibition(self):
         login_a_user(self.client)
@@ -562,8 +617,9 @@ class AddCarViewTest(TestCase):
 
 class EditCarTest(TestCase):
 
-    def test_edit_price_successfully(self):
+    def test_edit_price_successfully_with_car_permission(self):
         staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_car')
         owner = staff_user.staff.exhibition
         car = create_car(owner=owner)
         car.price_per_hour = 10
@@ -572,6 +628,15 @@ class EditCarTest(TestCase):
         car.refresh_from_db()
         self.assertEqual(car.price_per_hour, 100)
         self.assertRedirects(response, reverse('car_rental:car', kwargs={'pk': '1'}))
+
+    def test_access_denied_with_no_car_permission(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        owner = staff_user.staff.exhibition
+        car = create_car(owner=owner)
+        car.price_per_hour = 10
+        car.save()
+        response = self.client.post(reverse('car_rental:edit_car', kwargs={'pk': '1'}), {'price_per_hour': 100})
+        self.assertEqual(response.status_code, 403)
 
     def test_non_exhibition(self):
         renter = login_a_user(self.client)
@@ -585,6 +650,7 @@ class EditCarTest(TestCase):
 
     def test_non_owner_exhibition(self):
         non_owner = login_a_user(self.client, is_staff=True)
+        non_owner.staff.add_permissions('can_access_car')
         owner_staff_user = create_user(is_staff=True)
         owner = owner_staff_user.staff.exhibition
         car = create_car(owner=owner)
@@ -597,6 +663,7 @@ class EditCarTest(TestCase):
 
     def test_rented_car(self):
         staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_car')
         owner = staff_user.staff.exhibition
         car = create_rented_car(owner=owner)
         car.price_per_hour = 10
@@ -694,10 +761,11 @@ class UserDetailViewTest(TestCase):
         user1 = login_a_user(self.client)
         user2 = create_user('user2')
         response = self.client.get(reverse('car_rental:user_info', kwargs={'pk': 2}))
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 403)
 
     def test_requested_user(self):
         staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_answer_request')
         owner = staff_user.staff.exhibition
         user2 = create_user('user2')
         car = create_car(owner=owner)
@@ -748,7 +816,7 @@ class CreateStaffViewTest(TestCase):
         response = self.client.post(reverse('car_rental:add_staff'), data)
         self.assertEqual(response.status_code, 403)
 
-    def test_not_senior_staff(self):
+    def test_not_staff_access_staff(self):
         login_a_user(self.client, is_staff=True)
         data = {'username': 'user2', 'password1': 'qw12er34', 'password2': 'qw12er34'}
         response = self.client.post(reverse('car_rental:add_staff'), data)
@@ -756,8 +824,7 @@ class CreateStaffViewTest(TestCase):
 
     def test_different_passwords(self):
         staff_user = login_a_user(self.client, is_staff=True)
-        staff_user.staff.is_senior = True
-        staff_user.staff.save()
+        staff_user.staff.add_permissions('can_access_staff')
         data = {'username': 'user2', 'password1': 'qw12er34', 'password2': 'eeqw12er34'}
         response = self.client.post(reverse('car_rental:add_staff'), data)
         self.assertNotEqual(response.status_code, 403)
@@ -765,16 +832,14 @@ class CreateStaffViewTest(TestCase):
 
     def test_same_username(self):
         staff_user = login_a_user(self.client, is_staff=True)
-        staff_user.staff.is_senior = True
-        staff_user.staff.save()
+        staff_user.staff.add_permissions('can_access_staff')
         data = {'username': staff_user.username, 'password1': 'qw12er34', 'password2': 'qw12er34'}
         response = self.client.post(reverse('car_rental:add_staff'), data)
         self.assertContains(response, 'already exists')
 
     def test_successful_normal_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
-        staff_user.staff.is_senior = True
-        staff_user.staff.save()
+        staff_user.staff.add_permissions('can_access_staff')
         data = {'username': 'normal1', 'password1': 'qw12er34', 'password2': 'qw12er34'
             , 'staff_type': 'N'}
         response = self.client.post(reverse('car_rental:add_staff'), data)
@@ -785,8 +850,7 @@ class CreateStaffViewTest(TestCase):
 
     def test_successful_senior_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
-        staff_user.staff.is_senior = True
-        staff_user.staff.save()
+        staff_user.staff.add_permissions('can_access_staff')
         data = {'username': 'senior1', 'password1': 'qw12er34', 'password2': 'qw12er34'
             , 'staff_type': 'S'}
         response = self.client.post(reverse('car_rental:add_staff'), data)
@@ -803,33 +867,30 @@ class StaffListViewTest(TestCase):
         response = self.client.get(reverse('car_rental:staff'))
         self.assertEqual(response.status_code, 403)
 
-    def test_not_senior(self):
+    def test_no_staff_permission(self):
         user = login_a_user(self.client, is_staff=True)
         response = self.client.get(reverse('car_rental:staff'))
         self.assertEqual(response.status_code, 403)
 
     def test_no_staffs(self):
         user = login_a_user(self.client, is_staff=True)
-        user.staff.is_senior = True
-        user.staff.save()
+        user.staff.add_permissions('can_access_staff')
         response = self.client.get(reverse('car_rental:staff'))
         self.assertContains(response, 'You have no staffs.')
 
     def test_one_normal_staff(self):
-        senior_staff_user = login_a_user(self.client, is_staff=True)
-        senior_staff_user.staff.is_senior = True
-        senior_staff_user.staff.save()
-        staff_user = create_user(is_staff=True, exhibition=senior_staff_user.staff.exhibition)
+        staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_staff')
+        staff_user = create_user(is_staff=True, exhibition=staff_user.staff.exhibition)
         response = self.client.get(reverse('car_rental:staff'))
         self.assertNotContains(response, 'You have no staffs.')
         self.assertContains(response, staff_user.username)
         self.assertContains(response, "Normal")
 
     def test_one_senior_staff(self):
-        senior_staff_user = login_a_user(self.client, is_staff=True)
-        senior_staff_user.staff.is_senior = True
-        senior_staff_user.staff.save()
-        staff_user = create_user(is_staff=True, exhibition=senior_staff_user.staff.exhibition)
+        staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_staff')
+        staff_user = create_user(is_staff=True, exhibition=staff_user.staff.exhibition)
         staff_user.staff.is_senior = True
         staff_user.staff.save()
         response = self.client.get(reverse('car_rental:staff'))
@@ -845,33 +906,30 @@ class StaffDetailViewTest(TestCase):
         response = self.client.get(reverse('car_rental:staff_detail', kwargs={'pk': 1}))
         self.assertEqual(response.status_code, 403)
 
-    def test_not_senior(self):
+    def test_access_denied(self):
         user = login_a_user(self.client, is_staff=True)
         response = self.client.get(reverse('car_rental:staff_detail', kwargs={'pk': 1}))
         self.assertEqual(response.status_code, 403)
 
     def test_no_staffs(self):
         user = login_a_user(self.client, is_staff=True)
-        user.staff.is_senior = True
-        user.staff.save()
+        user.staff.add_permissions('can_access_staff')
         response = self.client.get(reverse('car_rental:staff_detail', kwargs={'pk': 2}))
         self.assertEqual(response.status_code, 404)
 
     def test_normal_staff(self):
-        senior_staff_user = login_a_user(self.client, is_staff=True)
-        senior_staff_user.staff.is_senior = True
-        senior_staff_user.staff.save()
-        staff_user = create_user(is_staff=True, exhibition=senior_staff_user.staff.exhibition)
+        staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_staff')
+        staff_user = create_user(is_staff=True, exhibition=staff_user.staff.exhibition)
         response = self.client.get(reverse('car_rental:staff_detail', kwargs={'pk': 2}))
         self.assertNotContains(response, 'You have no staffs.')
         self.assertContains(response, staff_user.username)
         self.assertContains(response, "Normal")
 
     def test_senior_staff(self):
-        senior_staff_user = login_a_user(self.client, is_staff=True)
-        senior_staff_user.staff.is_senior = True
-        senior_staff_user.staff.save()
-        staff_user = create_user(is_staff=True, exhibition=senior_staff_user.staff.exhibition)
+        staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_staff')
+        staff_user = create_user(is_staff=True, exhibition=staff_user.staff.exhibition)
         staff_user.staff.is_senior = True
         staff_user.staff.save()
         response = self.client.get(reverse('car_rental:staff_detail', kwargs={'pk': 2}))
@@ -887,25 +945,78 @@ class StaffDeleteViewTest(TestCase):
         response = self.client.get(reverse('car_rental:delete_staff', kwargs={'pk': 1}))
         self.assertEqual(response.status_code, 403)
 
-    def test_not_senior(self):
+    def test_access_denied(self):
         user = login_a_user(self.client, is_staff=True)
         response = self.client.get(reverse('car_rental:delete_staff', kwargs={'pk': 1}))
         self.assertEqual(response.status_code, 403)
 
     def test_no_staffs(self):
         user = login_a_user(self.client, is_staff=True)
-        user.staff.is_senior = True
-        user.staff.save()
+        user.staff.add_permissions('can_access_staff')
         response = self.client.get(reverse('car_rental:delete_staff', kwargs={'pk': 2}))
         self.assertEqual(response.status_code, 404)
 
     def test_normal_staff(self):
-        senior_staff_user = login_a_user(self.client, is_staff=True)
-        senior_staff_user.staff.is_senior = True
-        senior_staff_user.staff.save()
-        staff_user = create_user(is_staff=True, exhibition=senior_staff_user.staff.exhibition)
+        staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_access_staff')
+        staff_user = create_user(is_staff=True, exhibition=staff_user.staff.exhibition)
         response = self.client.post(reverse('car_rental:delete_staff', kwargs={'pk': 2}), {'Yes': True})
         self.assertRedirects(response, reverse('car_rental:staff'))
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(Staff.objects.count(), 1)
         self.assertNotEqual(User.objects.get().username, staff_user.username)
+
+
+class ChangePermissionsViewTest(TestCase):
+
+    def test_not_have_staff_permission(self):
+        user = login_a_user(client=self.client, is_staff=True)
+        staff = user.staff
+        staff2 = create_user(is_staff=True, exhibition=staff.exhibition)
+        data = {'perms': ['can_access_credit']}
+        response = self.client.post(reverse('car_rental:staff_perms', kwargs={'pk': staff2.id}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_can_access_credit_permission(self):
+        user = login_a_user(client=self.client, is_staff=True)
+        staff = user.staff
+        staff.add_permissions('can_access_staff')
+        staff2 = create_user(is_staff=True, exhibition=staff.exhibition).staff
+        data = {'perms': ['CREDIT']}
+        response = self.client.post(reverse('car_rental:staff_perms', kwargs={'pk': staff2.id}), data)
+        self.assertRedirects(response, reverse('car_rental:staff_detail', kwargs={'pk': staff2.id}))
+        self.assertTrue(staff2.user.has_perm('car_rental.can_access_credit'))
+
+    def test_can_answer_request_permission(self):
+        user = login_a_user(client=self.client, is_staff=True)
+        staff = user.staff
+        staff.add_permissions('can_access_staff')
+        staff2 = create_user(is_staff=True, exhibition=staff.exhibition).staff
+        data = {'perms': ['REQUEST']}
+        response = self.client.post(reverse('car_rental:staff_perms', kwargs={'pk': staff2.id}), data)
+        self.assertRedirects(response, reverse('car_rental:staff_detail', kwargs={'pk': staff2.id}))
+        self.assertTrue(staff2.user.has_perm('car_rental.can_answer_request'))
+
+    def test_can_access_car_permission(self):
+        user = login_a_user(client=self.client, is_staff=True)
+        staff = user.staff
+        staff.add_permissions('can_access_staff')
+        staff2 = create_user(is_staff=True, exhibition=staff.exhibition).staff
+        data = {'perms': ['CAR']}
+        response = self.client.post(reverse('car_rental:staff_perms', kwargs={'pk': staff2.id}), data)
+        self.assertRedirects(response, reverse('car_rental:staff_detail', kwargs={'pk': staff2.id}))
+        self.assertTrue(staff2.user.has_perm('car_rental.can_access_car'))
+
+    def test_can_access_staff_permission(self):
+        user = login_a_user(client=self.client, is_staff=True)
+        staff = user.staff
+        staff.add_permissions('can_access_staff')
+        staff2 = create_user(is_staff=True, exhibition=staff.exhibition).staff
+        data = {'perms': ['STAFF']}
+        response = self.client.post(reverse('car_rental:staff_perms', kwargs={'pk': staff2.id}), data)
+        self.assertRedirects(response, reverse('car_rental:staff_detail', kwargs={'pk': staff2.id}))
+        self.assertTrue(staff2.user.has_perm('car_rental.can_access_staff'))
+
+
+
+# TODO: test list view filters

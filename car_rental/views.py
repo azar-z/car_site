@@ -1,7 +1,9 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, update_session_auth_hash, logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.models import Permission
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -14,19 +16,7 @@ from .forms import StaffCreationForm
 from .models import Car, RentRequest, User, Exhibition, Staff
 from . import forms as my_forms
 
-
-class LoginView(generic.FormView):
-    template_name = 'car_rental/login.html'
-    form_class = my_forms.LoginForm
-
-    def form_valid(self, form):
-        username = form.cleaned_data['username']
-        password = form.cleaned_data['password']
-        user = authenticate(username=username, password=password)
-        login(self.request, user)
-        return HttpResponseRedirect(reverse('car_rental:home'))
-
-
+# TODO: add filter
 class CarListView(generic.ListView):
     template_name = 'car_rental/car_list.html'
     model = Car
@@ -63,7 +53,7 @@ def rent_request_view(request, pk):
             return HttpResponseRedirect(reverse('car_rental:requests'))
     return HttpResponseRedirect(reverse('car_rental:car', kwargs={'pk': pk}))
 
-
+# TODO: add filter
 @method_decorator(login_required, name='dispatch')
 class RentRequestListView(generic.ListView):
     template_name = 'car_rental/request_list.html'
@@ -78,6 +68,8 @@ class RentRequestListView(generic.ListView):
 
 
 @login_required()
+@decorators.user_is_staff
+@permission_required('car_rental.can_answer_request', raise_exception=True)
 def answer_requests_view(request):
     user = request.user
     if user.is_staff and request.method == 'POST':
@@ -118,10 +110,10 @@ def change_password(request):
 
 
 @method_decorator(login_required, name='dispatch')
-@method_decorator(decorators.staff_is_senior, name='dispatch')
-class ChangeCreditView(generic.FormView):
+class ChangeCreditView(PermissionRequiredMixin, generic.FormView):
     template_name = 'car_rental/change_credit.html'
     form_class = my_forms.ChangeCreditForm
+    permission_required = 'car_rental.can_access_credit'
 
     def form_valid(self, form):
         delta_credit = form.cleaned_data['delta_credit']
@@ -158,6 +150,8 @@ def signup(request):
             user = authenticate(username=username, password=raw_password)
             if user_type == 'EX':
                 create_exhibition(user)
+            else:
+                user.user_permissions.add(Permission.objects.get(codename='can_access_credit'))
             login(request, user)
             return HttpResponseRedirect(reverse('car_rental:home'))
     else:
@@ -167,10 +161,11 @@ def signup(request):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_staff, name='dispatch')
-class AddCarView(generic.CreateView):
+class AddCarView(PermissionRequiredMixin, generic.CreateView):
     model = Car
     template_name = 'car_rental/add_car.html'
     fields = ['car_type', 'plate', 'price_per_hour', 'image']
+    permission_required = 'car_rental.can_access_car'
 
     def form_valid(self, form):
         response = super(AddCarView, self).form_valid(form)
@@ -181,10 +176,11 @@ class AddCarView(generic.CreateView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_staff, name='dispatch')
-class EditCarView(generic.UpdateView):
+class EditCarView(PermissionRequiredMixin, generic.UpdateView):
     model = Car
     template_name = 'car_rental/edit_car.html'
     fields = ['price_per_hour']
+    permission_required = 'car_rental.can_access_car'
 
     def get_queryset(self):
         current_user = self.request.user
@@ -192,9 +188,10 @@ class EditCarView(generic.UpdateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class DeleteCarView(generic.DeleteView):
+class DeleteCarView(PermissionRequiredMixin, generic.DeleteView):
     model = Car
     template_name = 'car_rental/delete_car.html'
+    permission_required = 'car_rental.can_access_car'
 
     def get_success_url(self):
         return reverse('car_rental:cars')
@@ -205,10 +202,11 @@ class DeleteCarView(generic.DeleteView):
 
 
 @method_decorator(login_required, name='dispatch')
-class UserDetailView(generic.DetailView):
+class UserDetailView(PermissionRequiredMixin, generic.DetailView):
     model = User
     context_object_name = 'user'
     template_name = 'car_rental/user_info.html'
+    permission_required = 'car_rental.can_answer_request'
 
     def get_queryset(self):
         current_user = self.request.user
@@ -246,11 +244,11 @@ class NeedRepairCarView(generic.UpdateView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_staff, name='dispatch')
-@method_decorator(decorators.staff_is_senior, name='dispatch')
-class CreateStaffView(generic.CreateView):
+class StaffCreateView(PermissionRequiredMixin, generic.CreateView):
     model = User
     form_class = StaffCreationForm
     template_name = 'car_rental/add_staff.html'
+    permission_required = 'car_rental.can_access_staff'
 
     def get_success_url(self):
         return reverse('car_rental:staff')
@@ -260,22 +258,23 @@ class CreateStaffView(generic.CreateView):
 
     def form_valid(self, form):
         current_user = self.request.user
-        response = super(CreateStaffView, self).form_valid(form)
+        response = super(StaffCreateView, self).form_valid(form)
         exhibition = current_user.staff.exhibition
-        staff = Staff.objects.create(user=self.object, exhibition=exhibition)
+        is_senior = False
         if form.cleaned_data.get('staff_type') == 'S':
-            staff.is_senior = True
+            is_senior = True
+        staff = Staff.objects.create(user=self.object, exhibition=exhibition, is_senior=is_senior)
         staff.save()
         return response
 
-
+# TODO: add filter
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_staff, name='dispatch')
-@method_decorator(decorators.staff_is_senior, name='dispatch')
-class StaffListView(generic.ListView):
+class StaffListView(PermissionRequiredMixin, generic.ListView):
     model = Staff
     template_name = 'car_rental/staff_list.html'
     context_object_name = 'staff_list'
+    permission_required = 'car_rental.can_access_staff'
 
     def get_queryset(self):
         return self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)
@@ -283,10 +282,10 @@ class StaffListView(generic.ListView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_staff, name='dispatch')
-@method_decorator(decorators.staff_is_senior, name='dispatch')
-class StaffDetailView(generic.DetailView):
+class StaffDetailView(PermissionRequiredMixin, generic.DetailView):
     model = Staff
     template_name = 'car_rental/staff_detail.html'
+    permission_required = 'car_rental.can_access_staff'
 
     def get_queryset(self):
         return self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)
@@ -294,10 +293,10 @@ class StaffDetailView(generic.DetailView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_staff, name='dispatch')
-@method_decorator(decorators.staff_is_senior, name='dispatch')
-class StaffDeleteView(generic.DeleteView):
+class StaffDeleteView(PermissionRequiredMixin, generic.DeleteView):
     model = User
     template_name = 'car_rental/delete_staff.html'
+    permission_required = 'car_rental.can_access_staff'
 
     def get_success_url(self):
         return reverse('car_rental:staff')
@@ -306,3 +305,39 @@ class StaffDeleteView(generic.DeleteView):
         staff_queryset = self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)
         user_queryset = User.objects.filter(staff__in=staff_queryset)
         return user_queryset
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.user_is_staff, name='dispatch')
+class ChangePermissions(PermissionRequiredMixin, generic.UpdateView):
+    model = Staff
+    form_class = my_forms.StaffPermissionsForm
+    template_name = 'car_rental/staff_permissions.html'
+    permission_required = 'car_rental.can_access_staff'
+
+    def form_valid(self, form):
+        response = super(ChangePermissions, self).form_valid(form)
+        perms = form.cleaned_data.get('perms')
+        if 'CREDIT' in perms:
+            self.object.add_permissions('can_access_credit')
+        else:
+            self.object.remove_permissions('can_access_credit')
+        if 'REQUEST' in perms:
+            self.object.add_permissions('can_answer_request')
+        else:
+            self.object.remove_permissions('can_answer_request')
+        if 'CAR' in perms:
+            self.object.add_permissions('can_access_car')
+        else:
+            self.object.remove_permissions('can_access_car')
+        if 'STAFF' in perms:
+            self.object.add_permissions('can_access_staff')
+        else:
+            self.object.remove_permissions('can_access_staff')
+        return response
+
+
+
+
+
+

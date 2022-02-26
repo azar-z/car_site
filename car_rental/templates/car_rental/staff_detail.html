@@ -27,6 +27,11 @@
             </tr>
         </table>
 
+{% if perms.car_rental.can_access_staff %}
+        <a class="btn btn-info" href="{% url 'car_rental:delete_staff' staff.user.id %}" role="button" style="width:19%">Remove This Staff</a>
+        <a class="btn btn-info" href="{% url 'car_rental:staff_perms' staff.id %}" role="button" style="width:19%">Edit Permissions</a>
+{% endif %}
+
 {% if staff.rentrequest_set.all %}
         <h1>Answered Requests</h1>
 
@@ -65,9 +70,7 @@
         </tbody>
         </table>
 {% else %}
-       <div class="alert alert-danger"><strong>This staff has answered no requests till now.</strong></div>
+       <div class="alert alert-danger" style="margin-top: 20px"><strong>This staff has answered no requests till now.</strong></div>
 {% endif %}
-
-        <a class="btn btn-info" href="{% url 'car_rental:delete_staff' staff.user.id %}" role="button" style="width:19%">Remove This Staff</a>
 </div>
 {% endblock %}

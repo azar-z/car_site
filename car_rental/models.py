@@ -1,7 +1,7 @@
 import datetime
 from math import ceil
 
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Permission
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
@@ -29,6 +29,9 @@ class Exhibition(models.Model):
     name = models.CharField(max_length=200)
     credit = models.IntegerField(default=0)
 
+    class Meta:
+        permissions = (('can_access_credit', 'Can access credit'),)
+
     def get_all_requests(self):
         return RentRequest.objects.filter(car__owner=self)
 
@@ -41,8 +44,13 @@ class StaffManager(models.Manager):
 
     def create(self, *args, **kwargs):
         staff = super(StaffManager, self).create(*args, **kwargs)
-        staff.user.is_staff = True
-        staff.user.save()
+        user = staff.user
+        user.is_staff = True
+        user.save()
+        if staff.is_senior:
+            staff.add_permissions('can_access_credit', 'can_answer_request', 'can_access_car', 'can_access_staff')
+        else:
+            staff.remove_permissions('can_access_credit')
         return staff
 
 
@@ -51,6 +59,22 @@ class Staff(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     exhibition = models.ForeignKey(Exhibition, on_delete=models.CASCADE)
     objects = StaffManager()
+
+    class Meta:
+        permissions = (('can_access_staff', 'Can access staff'),)
+
+    def add_permissions(self, *codenames):
+        for codename in codenames:
+            permission = Permission.objects.get(codename=codename)
+            self.user.user_permissions.add(permission)
+
+    def remove_permissions(self, *codenames):
+        for codename in codenames:
+            permission = Permission.objects.get(codename=codename)
+            self.user.user_permissions.remove(permission)
+
+    def get_absolute_url(self):
+        return reverse('car_rental:staff_detail', kwargs={'pk': self.id})
 
 
 class Car(models.Model):
@@ -63,6 +87,9 @@ class Car(models.Model):
     rent_end_time = models.DateTimeField('End Time', default=timezone.now)
     needs_repair = models.BooleanField(default=False)
     image = models.ImageField(upload_to='cars', null=True, blank=True, default='default.jpg')
+
+    class Meta:
+        permissions = (('can_access_car', 'Can access car'),)
 
     def __str__(self):
         return str(self.pk) + ". " + self.car_type
@@ -92,6 +119,9 @@ class RentRequest(models.Model):
     rent_end_time = models.DateTimeField('End Time', default=get_tomorrow)
     creation_time = models.DateTimeField('Request time:', default=timezone.now)
     responser = models.ForeignKey(Staff, on_delete=models.SET_NULL, default=None, null=True)
+
+    class Meta:
+        permissions = (('can_answer_request', 'Can answer requests'),)
 
     def accept(self, user):
         self.is_accepted = True

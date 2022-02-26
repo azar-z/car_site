@@ -35,7 +35,7 @@
             <strong>This car needs repair!</strong>
         </div>
 {% endif %}
-        <img src="{{ car.image.url }}" />
+        <img src="{{ car.image.url }}"  alt="car image"/>
         <table class="table table-striped table-hover info-table">
             <tr>
                 <td>Model</td>
@@ -118,12 +118,14 @@
         </form>
     {% endif %}
 {% endif %}
-    {% if not car.is_rented and car.owner == user.staff.exhibition%}
+    {% if not car.is_rented and car.owner == user.staff.exhibition and perms.car_rental.can_access_car%}
         <a class="btn btn-info" href="{% url 'car_rental:edit_car' car.id %}" role="button" style="width:19%">Change Price</a>
         <a class="btn btn-info" href="{% url 'car_rental:delete_car' car.id %}" role="button" style="width:19%">Remove</a>
     {% endif %}
-    {%if car.owner == user.staff.exhibition %}
-        <a class="btn btn-info" href="{% url 'car_rental:needs_repair' car.id %}" role="button" style="width:19%">Needs Repair?</a>
+    {%if car.owner == user.staff.exhibition and perms.car_rental.can_access_car %}
+        <a class="btn btn-info" href="{% url 'car_rental:needs_repair' car.id %}" role="button" style="width:19%">
+            Needs Repair?
+        </a>
     {% endif %}
 
     {%if car.renter == user and car.needs_repair %}

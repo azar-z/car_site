@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from car_rental.models import User
+from car_rental.models import User, Staff
 
 
 class LoginForm(forms.Form):
@@ -35,11 +35,10 @@ class SignUpForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('username', 'user_type', 'password1', 'password2', )
+        fields = ('username', 'user_type', 'password1', 'password2',)
 
 
 class StaffCreationForm(UserCreationForm):
-
     CHOICES = [('N', 'Normal'),
                ('S', 'Senior')]
 
@@ -48,7 +47,7 @@ class StaffCreationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('username', 'staff_type', 'password1', 'password2', )
+        fields = ('username', 'staff_type', 'password1', 'password2',)
 
 
 class RentRequestForm(forms.Form):
@@ -64,3 +63,17 @@ class RentRequestForm(forms.Form):
             if rent_end_time <= rent_start_time or rent_start_time < timezone.now():
                 raise ValidationError("Request is not valid.")
         return cleaned_data
+
+
+class StaffPermissionsForm(forms.ModelForm):
+    PERMISSION_CHOICES = [('CREDIT', 'credit access'), ('REQUEST', 'request access'),
+                          ('CAR', 'car access'), ('STAFF', 'access staff')]
+    perms = forms.MultipleChoiceField(choices=PERMISSION_CHOICES, widget=forms.CheckboxSelectMultiple,
+                                      label='What permissions should this user have?', required=False)
+
+    def __init__(self, *args, **kwargs):
+        super(StaffPermissionsForm, self).__init__(*args, **kwargs)
+
+    class Meta:
+        model = Staff
+        fields = []

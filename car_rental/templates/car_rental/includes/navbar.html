@@ -12,24 +12,25 @@
             <li class="nav-item {% if url_name == 'home' %}active{% endif %}">
                 <a class="nav-link" href="{% url 'car_rental:home' %}">Home</a>
             </li>
-
+            <li class="nav-item {% if url_name == 'cars' %}active{% endif %}">
+                <a class="nav-link" href="{% url 'car_rental:cars' %}">Cars</a>
+            </li>
+{% if not user.is_anonymous %}
             <li class="nav-item {% if url_name == 'profile' %}active{% endif %}">
                 <a class="nav-link" href="{% url 'car_rental:profile' %}">Profile</a>
             </li>
 
-            <li class="nav-item {% if url_name == 'cars' %}active{% endif %}">
-                <a class="nav-link" href="{% url 'car_rental:cars' %}">Cars</a>
-            </li>
-
+    {% if not user.is_staff or perms.car_rental.can_answer_request %}
             <li class="nav-item {% if url_name == 'requests' %}active{% endif %}">
                 <a class="nav-link" href="{% url 'car_rental:requests' %}">Requests</a>
             </li>
-
-    {% if user.is_staff %}
+    {% endif %}
+    {% if perms.car_rental.can_access_car %}
         <li class="nav-item {% if url_name == 'add_car' %}active{% endif %}">
                 <a class="nav-link" href="{% url 'car_rental:add_car' %}">Add Car</a>
         </li>
-        {% if user.staff.is_senior %}
+    {% endif %}
+        {% if perms.car_rental.can_access_staff %}
         <li class="nav-item {% if url_name == 'staff'%}active{% endif %}">
             <a class="nav-link" href="{% url 'car_rental:staff' %}">Staff</a>
         </li>
@@ -37,7 +38,7 @@
             <a class="nav-link" href="{% url 'car_rental:add_staff' %}">Add Staff</a>
         </li>
         {% endif %}
-    {% endif %}
+{% endif %}
     </ul>
     <ul class="navbar-nav ml-auto">
             <li class="nav-item {% if url_name == 'login' %}active{% endif %}">
