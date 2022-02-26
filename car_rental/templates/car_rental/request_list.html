@@ -1,4 +1,7 @@
 {% extends 'car_rental/base.html' %}
+{% load bootstrap4 %}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
 {% load static %}
 
 {% block title %}Your Requests{% endblock %}
@@ -68,6 +71,11 @@
         <div class="alert alert-danger"><strong>No Requests.</strong></div>
     {% endif %}
 {% else %}
+    {{ filter.form.media }}
+    <form action="" method="get" style="margin-bottom: 10px" >
+    <table>{{ filter.form.as_table }}</table>
+        <input type="submit" value="search" class="btn btn-info"/>
+    </form>
     {% if requests %}
         <table class="table table-striped table-hover">
         <thead>

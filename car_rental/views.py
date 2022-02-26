@@ -1,3 +1,4 @@
+import django_filters.views
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, update_session_auth_hash, logout
 from django.contrib.auth.decorators import login_required, permission_required
@@ -10,17 +11,20 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import generic
+from django_filters import views as filter_views
 
 from . import decorators
+from . import filters as my_filters
 from .forms import StaffCreationForm
 from .models import Car, RentRequest, User, Exhibition, Staff
 from . import forms as my_forms
 
-# TODO: add filter
-class CarListView(generic.ListView):
+
+class CarListView(filter_views.FilterView):
     template_name = 'car_rental/car_list.html'
     model = Car
     context_object_name = 'cars'
+    filterset_class = my_filters.CarFilterSet
 
     def get_queryset(self):
         current_user = self.request.user
@@ -53,12 +57,13 @@ def rent_request_view(request, pk):
             return HttpResponseRedirect(reverse('car_rental:requests'))
     return HttpResponseRedirect(reverse('car_rental:car', kwargs={'pk': pk}))
 
-# TODO: add filter
+
 @method_decorator(login_required, name='dispatch')
-class RentRequestListView(generic.ListView):
+class RentRequestListView(filter_views.FilterView):
     template_name = 'car_rental/request_list.html'
     model = RentRequest
     context_object_name = 'requests'
+    filterset_class = my_filters.RentRequestFilterSet
 
     def get_queryset(self):
         current_user = self.request.user
@@ -267,14 +272,15 @@ class StaffCreateView(PermissionRequiredMixin, generic.CreateView):
         staff.save()
         return response
 
-# TODO: add filter
+
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_staff, name='dispatch')
-class StaffListView(PermissionRequiredMixin, generic.ListView):
+class StaffListView(PermissionRequiredMixin, filter_views.FilterView):
     model = Staff
     template_name = 'car_rental/staff_list.html'
     context_object_name = 'staff_list'
     permission_required = 'car_rental.can_access_staff'
+    filterset_class = my_filters.StaffFilterSet
 
     def get_queryset(self):
         return self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)

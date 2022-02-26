@@ -11,7 +11,12 @@
 <div class="container">
     <h1>Your Staff</h1>
 
+    <form action="" method="get" style="margin-bottom: 10px">
+        {{ filter.form.as_table }}
+        <input type="submit" value="search" class="btn btn-info"/>
+    </form>
 {% if staff_list %}
+
 <table class="table table-striped table-hover">
 
     <thead class="thead-dark">

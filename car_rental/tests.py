@@ -1017,6 +1017,3 @@ class ChangePermissionsViewTest(TestCase):
         self.assertRedirects(response, reverse('car_rental:staff_detail', kwargs={'pk': staff2.id}))
         self.assertTrue(staff2.user.has_perm('car_rental.can_access_staff'))
 
-
-
-# TODO: test list view filters

@@ -17,6 +17,11 @@
 {% endif %}
     </h1>
 
+    <form action="" method="get" style="margin-bottom: 10px">
+        {{ filter.form.as_table }}
+        <input type="submit" value="search" class="btn btn-info"/>
+    </form>
+
 {% if cars %}
 <table class="table table-striped table-hover">
 
