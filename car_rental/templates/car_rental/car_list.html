@@ -1,5 +1,9 @@
 {% extends 'car_rental/base.html' %}
 {% load static %}
+{% load bootstrap4 %}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+{% load crispy_forms_tags%}
 
 {% block title %} Cars {% endblock %}
 
@@ -17,8 +21,8 @@
 {% endif %}
     </h1>
 
-    <form action="" method="get" style="margin-bottom: 10px">
-        {{ filter.form.as_table }}
+    <form action="" method="get" style="margin-bottom: 10px" class="form-inline">
+        {{ filter.form|crispy }}
         <input type="submit" value="search" class="btn btn-info"/>
     </form>
 

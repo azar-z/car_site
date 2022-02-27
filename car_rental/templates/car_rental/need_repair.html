@@ -1,5 +1,10 @@
 {% extends 'car_rental/base.html' %}
 {% load static %}
+{% load bootstrap4 %}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+{% load crispy_forms_tags %}
+
 {% block style %}
     <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
 {% endblock %}
@@ -32,7 +37,7 @@
         {% else %}
             <p class="alert alert-warning">Your credit will decrease 100$ after confirmation!</p>
         {% endif %}
-        <table class="table form-table">{{ form.as_table }}</table>
+    {{ form|crispy }}
     <input type="submit" class="btn btn-info" value="Confirm" style="width: 50%">
     </fieldset>
 </form>

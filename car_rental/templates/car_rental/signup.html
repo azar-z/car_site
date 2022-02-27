@@ -1,5 +1,9 @@
 {% extends 'car_rental/base.html' %}
 {% load static %}
+{% load bootstrap4 %}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+{% load crispy_forms_tags %}
 
 {% block title %} Sign up {% endblock %}
 
@@ -9,12 +13,12 @@
 
 {% block content %}
     <div align="center">
-<form method="post" action="{% url 'car_rental:signup' %}" style="margin-top: 3%;width: 50%" >
+<form method="post" action="{% url 'car_rental:signup' %}" style="margin-top: 3%;width: 50%;" >
     {% csrf_token %}
             <legend>Sign up Information</legend>
-    <table class="table">{{ form.as_table }}</table>
+    {{ form|crispy }}
 
-            <input type="submit" value="Signup">
+            <input type="submit" value="Signup" class="btn btn-info">
 </form>
     </div>
 {% endblock %}

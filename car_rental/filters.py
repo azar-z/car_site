@@ -6,10 +6,18 @@ from car_rental.models import Car, RentRequest
 
 class CarFilterSet(django_filters.FilterSet):
     car_type = django_filters.CharFilter(label='Model', lookup_expr='icontains')
+    popular = django_filters.ChoiceFilter(label='', method='popular_cars', choices=[('P', 'popular'), ])
+
+    def popular_cars(self, queryset, name, value):
+        queryset2 = Car.objects.none()
+        for car in queryset:
+            if car.rentrequest_set.count() >= 3:
+                queryset2 |= Car.objects.filter(pk=car.pk)
+        return queryset2
 
     class Meta:
         model = Car
-        fields = ['id']
+        fields = ['car_type']
 
 
 class RentRequestFilterSet(django_filters.FilterSet):
@@ -17,7 +25,7 @@ class RentRequestFilterSet(django_filters.FilterSet):
 
     class Meta:
         model = RentRequest
-        fields = ['requester', 'has_result', 'is_accepted']
+        fields = ['is_accepted']
 
 
 class StaffFilterSet(django_filters.FilterSet):
@@ -25,4 +33,4 @@ class StaffFilterSet(django_filters.FilterSet):
 
     class Meta:
         model = Car
-        fields = ['id']
+        fields = ['user__username']

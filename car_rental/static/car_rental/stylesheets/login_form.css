@@ -1,9 +1,8 @@
 form {
-  border: 3px solid #f1f1f1;
+  border: 3px solid darkcyan;
   width: 400px;
   margin-top: 9%;
   padding: 10px;
-  background: darkcyan;
   text-align: left;
 }
 
@@ -20,7 +19,6 @@ input[type=text], input[type=password], input[type=submit] {
 
 label{
     font-size: 20px;
-    color: white;
 }
 
 legend{

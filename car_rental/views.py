@@ -1,4 +1,3 @@
-import django_filters.views
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, update_session_auth_hash, logout
 from django.contrib.auth.decorators import login_required, permission_required
@@ -55,6 +54,7 @@ def rent_request_view(request, pk):
                                                   rent_start_time=rent_start_time)
             rent_req.save()
             return HttpResponseRedirect(reverse('car_rental:requests'))
+    messages.error(request, 'Please enter valid start and end time.')
     return HttpResponseRedirect(reverse('car_rental:car', kwargs={'pk': pk}))
 
 
@@ -84,9 +84,10 @@ def answer_requests_view(request):
                 answer = request.POST[str(unanswered_request.id)]
                 if answer == 'yes':
                     unanswered_request.accept(user)
-                else:
+                elif answer == 'no':
                     unanswered_request.reject(user)
-
+                else:
+                    pass
         except KeyError:
             return render(request, 'car_rental/request_list.html',
                           {'requests': unanswered_requests, 'error_message': "Please answer the requests!"})
@@ -341,9 +342,3 @@ class ChangePermissions(PermissionRequiredMixin, generic.UpdateView):
         else:
             self.object.remove_permissions('can_access_staff')
         return response
-
-
-
-
-
-

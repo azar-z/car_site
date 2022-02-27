@@ -1,5 +1,10 @@
 {% extends 'car_rental/base.html' %}
 {% load static %}
+{% load bootstrap4 %}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+{% load crispy_forms_tags %}
+
 {% block style %}
     <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
 {% endblock %}
@@ -27,10 +32,12 @@
         <td>{{ object.plate }}</td>
     </tr>
     </table>
-        <label> Yes
-            <input required type="checkbox">
+        <div class="form-group form-inline">
+        <label> Yes, I am sure. &nbsp;
+            <input required type="checkbox" class="form-control">
         </label>
-        <table class="table form-table">{{ form.as_table }}</table>
+        </div>
+        {{ form|crispy }}
     <input type="submit" class="btn btn-info" value="Delete" style="width: 50%">
     </fieldset>
 </form>

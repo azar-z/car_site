@@ -1,5 +1,9 @@
 {% extends 'car_rental/base.html' %}
 {% load static %}
+{% load bootstrap4 %}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+{% load crispy_forms_tags %}
 
 {% block title %} Login {% endblock %}
 
@@ -12,8 +16,8 @@
 <form method="post" action="{% url 'car_rental:login' %}" >
     {% csrf_token %}
             <legend>Login Information</legend>
-            {{ form }}
-            <input type="submit" value="Login">
+            {{ form|crispy }}
+            <input type="submit" value="Login" class="btn btn-info">
 </form>
     </div>
 {% endblock %}

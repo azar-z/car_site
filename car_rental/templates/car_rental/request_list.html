@@ -2,6 +2,7 @@
 {% load bootstrap4 %}
 {% bootstrap_css %}
 {% bootstrap_javascript jquery='full' %}
+{% load crispy_forms_tags %}
 {% load static %}
 
 {% block title %}Your Requests{% endblock %}
@@ -56,7 +57,7 @@
                 <td>{{ request.get_price }}</td>
                 <td>
                     <label for="yes{{ forloop.counter }}">Yes</label>
-                    <input required type="radio" id="yes{{ forloop.counter }}" name="{{ request.id }}" value="yes">
+                    <input type="radio" id="yes{{ forloop.counter }}" name="{{ request.id }}" value="yes">
                     &nbsp;&nbsp;&nbsp;&nbsp;
                     <label for="no{{ forloop.counter }}">No</label>
                     <input type="radio" id="no{{ forloop.counter }}" name="{{ request.id }}" value="no">
@@ -72,8 +73,8 @@
     {% endif %}
 {% else %}
     {{ filter.form.media }}
-    <form action="" method="get" style="margin-bottom: 10px" >
-    <table>{{ filter.form.as_table }}</table>
+    <form action="" method="get" style="margin-bottom: 10px" class="form-inline">
+    {{ filter.form|crispy }}
         <input type="submit" value="search" class="btn btn-info"/>
     </form>
     {% if requests %}

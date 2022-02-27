@@ -1,5 +1,10 @@
 {% extends 'car_rental/base.html' %}
 {% load static %}
+{% load bootstrap4 %}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+{% load crispy_forms_tags %}
+
 {% block style %}
     <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_detail.css' %}">
 {% endblock %}
@@ -11,9 +16,9 @@
     <h1>Edit Staff Permissions</h1>
     <form method="post">
   {% csrf_token %}
-    <fieldset style="width: 50%">
-    <legend>Enter the following information:</legend>
-    <table class="table form-table">{{ form.as_table }}</table>
+    <fieldset style="width: 50%;" align="left">
+        <legend align="center">Enter the following information:</legend>
+        {{ form|crispy }}
     <input type="submit" class="btn btn-info" value="Confirm" style="width: 50%">
     </fieldset>
 </form>
