@@ -15,14 +15,11 @@
 <div class="container">
 
 <h1>Your Requests</h1>
-{% if error_message %}
-    <div class="alert alert-danger" ><strong>{{ error_message}}</strong></div>
-{% endif %}
     {% if requests %}
         <div class="alert alert-info"> Please accept or reject these requests:</div>
         <form action="{% url 'car_rental:answer_requests' %}" method="post">
         {% csrf_token %}
-        <table class="table  table-striped table-hover">
+        <table class="table table-hover">
         <thead>
         <tr>
             <td>#</td>

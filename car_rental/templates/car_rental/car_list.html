@@ -3,86 +3,47 @@
 {% load bootstrap4 %}
 {% bootstrap_css %}
 {% bootstrap_javascript jquery='full' %}
-{% load crispy_forms_tags%}
+{% load crispy_forms_tags %}
 
 {% block title %} Cars {% endblock %}
 
 {% block style %}
     <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/car_list.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/table_style.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>
-{% if user.is_staff %}
-   Your Cars
-{% else %}
-    Available Cars
-{% endif %}
-    </h1>
+    <div class="container">
+        <h1>Available Cars</h1>
 
-    <form action="" method="get" style="margin-bottom: 10px" class="form-inline">
-        {{ filter.form|crispy }}
-        <input type="submit" value="search" class="btn btn-info"/>
-    </form>
+        <form action="" method="get" style="margin-bottom: 10px" class="form-inline">
+            {{ filter.form|crispy }}
+            <input type="submit" value="search" class="btn btn-info"/>
+        </form>
 
-{% if cars %}
-<table class="table table-striped table-hover">
+        {% if cars %}
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                {% for car in cars %}
+                    <div class="col">
+                        <div class="card  mb-3">
+                            <img class="card-img-top" src="{{ car.image.url }}" alt="Card image">
+                            <div class="card-body">
+                                <h4 class="card-title car-type">{{ car.car_type }}</h4>
+                                <p class="card-text">
+                                    Price per hour: {{ car.price_per_hour }}<br>
+                                    Owner: {{ car.owner.name }}
+                                </p>
+                                <a href="{% url 'car_rental:car' car.id %}" class="btn btn-primary">
+                                    Detail and Request
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
 
-    <thead class="thead-dark">
-    <tr class="table_head" style="background: darkcyan;">
-    <td>#</td>
-    <td>Model</td>
-    <td>
-{% if user.is_staff %}
-   Status
-{% else %}
-    Price (per hour)
-{% endif %}
-    </td>
-    <td>
-{% if user.is_staff %}
-    ID
-{% else %}
-    Exhibition
-{% endif %}
-    </td>
-    </tr>
-    </thead>
-
-{% for car in cars %}
-    <tr>
-    <td>{{ forloop.counter }}</td>
-        <td><a href="{% url 'car_rental:car' car.id %}">{{ car.car_type }}</a></td>
-    <td>
-{% if user.is_staff %}
-    {% if car.is_rented %}
-        <span style="color: darkred">rented</span>
-    {% else %}
-        <span style="color: darkgreen">free</span>
-    {% endif %}
-{% else %}
-    {{ car.price_per_hour }}
-{% endif %}
-    </td>
-    <td>
-{% if user.is_staff %}
-    {{ car.id }}
-{% else %}
-    {{ car.owner.name }}
-{% endif %}
-    </td>
-    </tr>
-{% endfor %}
-{% else %}
-
-{% if user.is_staff %}
-        <div class="alert alert-danger"><strong>Sorry!</strong> You have no cars! </div>
-{% else %}
-        <div class="alert alert-danger"><strong>Sorry!</strong> There are no available cars for you! </div>
-{% endif %}
-
-{% endif %}
-</table>
-</div>
+        {% else %}
+            <div class="alert alert-danger"><strong>Sorry!</strong> There are no available cars for you!</div>
+        {% endif %}
+    </div>
 {% endblock %}

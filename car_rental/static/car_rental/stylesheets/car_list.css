@@ -1,18 +1,11 @@
-
-
-table{
-    width: 100%;
+.car-type{
+    color: darkcyan;
 }
-
-td{
+.card-text{
     font-size: 17px;
-    padding: 10px;
-
+    color: #075454;
 }
 
-.table_head > td{
-    color: white;
-    font-size: 20px;
+.card-deck .card{
+    width: 25%;
 }
-
-

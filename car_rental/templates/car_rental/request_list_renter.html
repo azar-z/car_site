@@ -6,7 +6,7 @@
 {% bootstrap_javascript jquery='full' %}
 {% load crispy_forms_tags%}
 
-{% block title %} Staffs {% endblock %}
+{% block title %} Your Request {% endblock %}
 
 {% block style %}
     <link rel="stylesheet" type="text/css" href="{% static 'car_rental/stylesheets/table_style.css' %}">
@@ -14,18 +14,17 @@
 
 {% block content %}
 <div class="container">
-    <h1>Staffs</h1>
-
+    <h1>Your Requests</h1>
+{{ filter.form.media }}
     <form action="" method="get" style="margin-bottom: 10px" class="form-inline">
         {{ filter.form|crispy }}
         <input type="submit" value="search" class="btn btn-info"/>
     </form>
 
-{% if staff_list %}
+{% if requests %}
     {% render_table table %}
 {% else %}
-    <div class="alert alert-danger">No staffs.
-        <a href="{% url 'car_rental:add_staff' %}">Add Staff </a></div>
+    <div class="alert alert-danger">No Requests.</div>
 {% endif %}
 </div>
 {% endblock %}

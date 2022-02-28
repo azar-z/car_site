@@ -92,53 +92,36 @@ def create_rented_car(car_type='type1', renter=None, owner=None, days=1, ex_name
     return car
 
 
-class CarListViewTest(TestCase):
+class CarListStaffViewTest(TestCase):
 
-    def test_not_login(self):
-        car = create_car()
-        response = self.client.get(reverse('car_rental:cars'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, car.car_type)
-
-    def test_no_car_exists(self):
+    def test_not_staff(self):
         login_a_user(self.client)
-        response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Available Cars')
-        self.assertContains(response, "There are no available cars for you!")
+        response = self.client.get(reverse('car_rental:cars_staff'))
+        self.assertEqual(response.status_code, 403)
 
     def test_no_car_exists_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
         car = create_car(ex_name='ex2')
-        response = self.client.get(reverse('car_rental:cars'))
+        response = self.client.get(reverse('car_rental:cars_staff'))
         self.assertContains(response, 'Your Cars')
         self.assertContains(response, "You have no cars!")
         self.assertNotContains(response, car.car_type)
         self.assertNotContains(response, 'Status')
 
-    def test_not_show_rented_car(self):
-        login_a_user(self.client)
-        car = create_rented_car()
-        response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Available Cars')
-        self.assertContains(response, "There are no available cars for you!")
-        self.assertNotContains(response, car.car_type)
-
     def test_show_available_car(self):
-        login_a_user(self.client)
-        car = create_car()
-        response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Available Cars')
-        self.assertNotContains(response, "There are no available cars for you!")
+        staff_user = login_a_user(self.client, is_staff=True)
+        car = create_car(owner=staff_user.staff.exhibition)
+        response = self.client.get(reverse('car_rental:cars_staff'))
         self.assertContains(response, car.car_type)
 
     def test_show_not_rented_car_to_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
         car = create_car(owner=staff_user.staff.exhibition)
-        response = self.client.get(reverse('car_rental:cars'))
+        response = self.client.get(reverse('car_rental:cars_staff'))
         self.assertContains(response, 'Your Cars')
         self.assertNotContains(response, "You have no cars!")
         self.assertContains(response, car.car_type)
-        self.assertContains(response, car.id)
+        self.assertContains(response, car.plate)
         self.assertContains(response, 'free')
         self.assertContains(response, 'Status')
 
@@ -146,7 +129,7 @@ class CarListViewTest(TestCase):
         staff_user = login_a_user(self.client, is_staff=True)
         owner = staff_user.staff.exhibition
         car = create_rented_car(owner=owner)
-        response = self.client.get(reverse('car_rental:cars'))
+        response = self.client.get(reverse('car_rental:cars_staff'))
         self.assertContains(response, 'Your Cars')
         self.assertNotContains(response, "You have no cars!")
         self.assertContains(response, car.car_type)
@@ -154,15 +137,30 @@ class CarListViewTest(TestCase):
         self.assertContains(response, 'rented')
         self.assertContains(response, 'Status')
 
-    def test_not_show_need_repair_car(self):
+
+class CarListRenterViewTest(TestCase):
+    def test_rented_car(self):
+        car = create_rented_car()
+        user = login_a_user(self.client)
+        response = self.client.get(reverse('car_rental:cars'))
+        self.assertContains(response, "There are no available cars for you!")
+        self.assertNotContains(response, car.car_type)
+
+    def test_need_repair_car(self):
         login_a_user(self.client)
         car = create_car()
         car.needs_repair = True
         car.save()
         response = self.client.get(reverse('car_rental:cars'))
-        self.assertContains(response, 'Available Cars')
         self.assertContains(response, "There are no available cars for you!")
         self.assertNotContains(response, car.car_type)
+
+    def test_available_car(self):
+        login_a_user(self.client)
+        car = create_car()
+        response = self.client.get(reverse('car_rental:cars'))
+        self.assertNotContains(response, "There are no available cars for you!")
+        self.assertContains(response, car.car_type)
 
 
 class CarDetailTest(TestCase):
@@ -292,55 +290,18 @@ def create_request(requester, car, start_time=timezone.now(), end_time=timezone.
     return rent_request
 
 
-class RentRequestListViewTest(TestCase):
+class RentRequestListRenterViewTest(TestCase):
 
     def test_not_login(self):
         create_car()
-        response = self.client.get(reverse('car_rental:requests'))
+        response = self.client.get(reverse('car_rental:requests_renter'))
         self.assertRedirects(response,
-                             reverse('car_rental:login') + "?next=" + reverse('car_rental:requests'))
-
-    def test_exhibition_no_request(self):
-        staff_user = login_a_user(self.client, is_staff=True)
-        owner = staff_user.staff.exhibition
-        create_car(owner=owner)
-        response = self.client.get(reverse('car_rental:requests'))
-        self.assertContains(response, "No Requests")
-        self.assertNotContains(response, "Please accept or reject these requests:")
-
-    def test_exhibition_with_unanswered_result(self):
-        staff_user = login_a_user(self.client, is_staff=True)
-        owner = staff_user.staff.exhibition
-        car = create_car(owner=owner)
-        requester = create_user('user1')
-        create_request(requester, car)
-        response = self.client.get(reverse('car_rental:requests'))
-        self.assertNotContains(response, "No Requests")
-        self.assertContains(response, "Please accept or reject these requests:")
-        self.assertContains(response, car.car_type)
-        self.assertContains(response, car.plate)
-        self.assertContains(response, requester.username)
-
-    def test_exhibition_with_answered_result(self):
-        staff_user = login_a_user(self.client, is_staff=True)
-        owner = staff_user.staff.exhibition
-        car = create_car(owner=owner)
-        requester = create_user('user1')
-        rent_request = create_request(requester, car)
-        rent_request.has_result = True
-        rent_request.save()
-        response = self.client.get(reverse('car_rental:requests'))
-        self.assertNotContains(response, "Please accept or reject these requests:")
-        self.assertContains(response, "No Requests")
-        self.assertNotContains(response, car.car_type)
+                             reverse('car_rental:login') + "?next=" + reverse('car_rental:requests_renter'))
 
     def test_renter_with_no_result(self):
-        staff_user = login_a_user(self.client, is_staff=True)
-        owner = staff_user.staff.exhibition
-        car = create_car(owner=owner)
-        response = self.client.get(reverse('car_rental:requests'))
+        login_a_user(self.client)
+        response = self.client.get(reverse('car_rental:requests_renter'))
         self.assertContains(response, "No Requests")
-        self.assertNotContains(response, "Please accept or reject these requests:")
 
     def test_renter_with_unanswered_result(self):
         staff_user = create_user(is_staff=True)
@@ -348,12 +309,11 @@ class RentRequestListViewTest(TestCase):
         car = create_car(owner=owner)
         requester = login_a_user(self.client)
         create_request(requester, car)
-        response = self.client.get(reverse('car_rental:requests'))
+        response = self.client.get(reverse('car_rental:requests_renter'))
         self.assertNotContains(response, "No Requests")
-        self.assertNotContains(response, "Please accept or reject these requests:")
         self.assertContains(response, car.car_type)
-        self.assertContains(response, car.owner.name)
         self.assertContains(response, "Not determined yet")
+        self.assertContains(response, car.owner.name)
 
     def test_renter_with_accepted_result(self):
         staff_user = create_user(is_staff=True)
@@ -364,7 +324,7 @@ class RentRequestListViewTest(TestCase):
         rent_request.has_result = True
         rent_request.is_accepted = True
         rent_request.save()
-        response = self.client.get(reverse('car_rental:requests'))
+        response = self.client.get(reverse('car_rental:requests_renter'))
         self.assertNotContains(response, "No Requests")
         self.assertNotContains(response, "Please accept or reject these requests:")
         self.assertContains(response, car.car_type)
@@ -380,12 +340,65 @@ class RentRequestListViewTest(TestCase):
         rent_request.has_result = True
         rent_request.is_accepted = False
         rent_request.save()
-        response = self.client.get(reverse('car_rental:requests'))
+        response = self.client.get(reverse('car_rental:requests_renter'))
         self.assertNotContains(response, "No Requests")
         self.assertNotContains(response, "Please accept or reject these requests:")
         self.assertContains(response, car.car_type)
         self.assertContains(response, owner.name)
         self.assertContains(response, "Rejected")
+
+
+class RentRequestListStaffViewTest(TestCase):
+
+    def test_not_login(self):
+        create_car()
+        response = self.client.get(reverse('car_rental:requests_staff'))
+        self.assertRedirects(response,
+                             reverse('car_rental:login') + "?next=" + reverse('car_rental:requests_staff'))
+
+    def test_access_denied(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        owner = staff_user.staff.exhibition
+        create_car(owner=owner)
+        response = self.client.get(reverse('car_rental:requests_staff'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_exhibition_no_request(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_answer_request')
+        owner = staff_user.staff.exhibition
+        create_car(owner=owner)
+        response = self.client.get(reverse('car_rental:requests_staff'))
+        self.assertContains(response, "No Requests.")
+        self.assertNotContains(response, "Please accept or reject these requests:")
+
+    def test_exhibition_with_unanswered_result(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        staff_user.staff.add_permissions('can_answer_request')
+        owner = staff_user.staff.exhibition
+        car = create_car(owner=owner)
+        requester = create_user('user1')
+        create_request(requester, car)
+        response = self.client.get(reverse('car_rental:requests_staff'))
+        self.assertNotContains(response, "No Requests")
+        self.assertContains(response, "Please accept or reject these requests:")
+        self.assertContains(response, car.car_type)
+        self.assertContains(response, car.plate)
+        self.assertContains(response, requester.username)
+
+    def test_exhibition_with_answered_result(self):
+        staff_user = login_a_user(self.client, is_staff=True)
+        owner = staff_user.staff.exhibition
+        staff_user.staff.add_permissions('can_answer_request')
+        car = create_car(owner=owner)
+        requester = create_user('user1')
+        rent_request = create_request(requester, car)
+        rent_request.has_result = True
+        rent_request.save()
+        response = self.client.get(reverse('car_rental:requests_staff'))
+        self.assertNotContains(response, "Please accept or reject these requests:")
+        self.assertContains(response, "No Requests")
+        self.assertNotContains(response, car.car_type)
 
 
 class AnswerRequestView(TestCase):
@@ -420,7 +433,7 @@ class AnswerRequestView(TestCase):
         requester = create_user('user1')
         rent_request = create_request(requester, car)
         response = self.client.get(reverse('car_rental:answer_requests'))
-        self.assertRedirects(response, reverse('car_rental:requests'))
+        self.assertRedirects(response, reverse('car_rental:requests_staff'))
         self.assertFalse(rent_request.has_result)
         self.assertEqual(owner.credit, 0)
         self.assertEqual(requester.credit, 0)
@@ -438,7 +451,7 @@ class AnswerRequestView(TestCase):
         rent_request.refresh_from_db()
         owner.refresh_from_db()
         requester.refresh_from_db()
-        self.assertRedirects(response, reverse('car_rental:requests'))
+        self.assertRedirects(response, reverse('car_rental:requests_staff'))
         self.assertTrue(rent_request.has_result)
         self.assertFalse(rent_request.is_accepted)
         self.assertEqual(owner.credit, 0)
@@ -457,7 +470,7 @@ class AnswerRequestView(TestCase):
         rent_request.refresh_from_db()
         owner.refresh_from_db()
         requester.refresh_from_db()
-        self.assertRedirects(response, reverse('car_rental:requests'))
+        self.assertRedirects(response, reverse('car_rental:requests_staff'))
         self.assertTrue(rent_request.has_result)
         self.assertTrue(rent_request.is_accepted)
         self.assertEqual(owner.credit, 1000)
@@ -876,14 +889,13 @@ class StaffListViewTest(TestCase):
         user = login_a_user(self.client, is_staff=True)
         user.staff.add_permissions('can_access_staff')
         response = self.client.get(reverse('car_rental:staff'))
-        self.assertContains(response, 'You have no staffs.')
+        self.assertContains(response, 'No staffs.')
 
     def test_one_normal_staff(self):
         staff_user = login_a_user(self.client, is_staff=True)
         staff_user.staff.add_permissions('can_access_staff')
         staff_user = create_user(is_staff=True, exhibition=staff_user.staff.exhibition)
         response = self.client.get(reverse('car_rental:staff'))
-        self.assertNotContains(response, 'You have no staffs.')
         self.assertContains(response, staff_user.username)
         self.assertContains(response, "Normal")
 

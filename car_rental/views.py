@@ -11,26 +11,39 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import generic
 from django_filters import views as filter_views
+from django_tables2.views import SingleTableMixin
 
 from . import decorators
 from . import filters as my_filters
 from .forms import StaffCreationForm
 from .models import Car, RentRequest, User, Exhibition, Staff
 from . import forms as my_forms
+from . import tables as my_tables
 
 
-class CarListView(filter_views.FilterView):
+@method_decorator(decorators.user_is_not_staff, name='dispatch')
+class CarListRenterView(filter_views.FilterView):
     template_name = 'car_rental/car_list.html'
     model = Car
     context_object_name = 'cars'
     filterset_class = my_filters.CarFilterSet
 
     def get_queryset(self):
+        return Car.objects.exclude(rent_end_time__gt=timezone.now()).filter(needs_repair=False)
+
+
+@method_decorator(decorators.user_is_staff, name='dispatch')
+class CarListStaffView(SingleTableMixin, filter_views.FilterView):
+    template_name = 'car_rental/car_list_staff.html'
+    model = Car
+    context_object_name = 'cars'
+    paginate_by = 7
+    filterset_class = my_filters.CarFilterSet
+    table_class = my_tables.CarStaffTable
+
+    def get_queryset(self):
         current_user = self.request.user
-        if current_user.is_staff:
-            return current_user.staff.exhibition.cars_owned.all()
-        else:
-            return Car.objects.exclude(rent_end_time__gt=timezone.now()).filter(needs_repair=False)
+        return current_user.staff.exhibition.cars_owned.all()
 
 
 class CarDetailView(generic.DetailView):
@@ -53,23 +66,37 @@ def rent_request_view(request, pk):
             rent_req = RentRequest.objects.create(car=car, requester=request.user, rent_end_time=rent_end_time,
                                                   rent_start_time=rent_start_time)
             rent_req.save()
-            return HttpResponseRedirect(reverse('car_rental:requests'))
+            return HttpResponseRedirect(reverse('car_rental:requests_renter'))
     messages.error(request, 'Please enter valid start and end time.')
     return HttpResponseRedirect(reverse('car_rental:car', kwargs={'pk': pk}))
 
 
 @method_decorator(login_required, name='dispatch')
-class RentRequestListView(filter_views.FilterView):
-    template_name = 'car_rental/request_list.html'
+@method_decorator(decorators.user_is_not_staff, name='dispatch')
+class RentRequestRenterListView(SingleTableMixin, filter_views.FilterView):
+    template_name = 'car_rental/request_list_renter.html'
     model = RentRequest
     context_object_name = 'requests'
+    paginate_by = 7
     filterset_class = my_filters.RentRequestFilterSet
+    table_class = my_tables.RentRequestRenterTable
 
     def get_queryset(self):
         current_user = self.request.user
-        if current_user.is_staff:
-            return current_user.staff.exhibition.get_all_requests().order_by('rent_start_time').filter(has_result=False)
         return current_user.rentrequest_set.all().order_by('-rent_start_time')
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(decorators.user_is_staff, name='dispatch')
+class RentRequestStaffListView(PermissionRequiredMixin, generic.ListView):
+    template_name = 'car_rental/request_list_staff.html'
+    model = RentRequest
+    context_object_name = 'requests'
+    permission_required = 'car_rental.can_answer_request'
+
+    def get_queryset(self):
+        current_user = self.request.user
+        return current_user.staff.exhibition.get_all_requests().order_by('rent_start_time').filter(has_result=False)
 
 
 @login_required()
@@ -77,21 +104,25 @@ class RentRequestListView(filter_views.FilterView):
 @permission_required('car_rental.can_answer_request', raise_exception=True)
 def answer_requests_view(request):
     user = request.user
-    if user.is_staff and request.method == 'POST':
+    if request.method == 'POST':
         unanswered_requests = user.staff.exhibition.get_all_requests().filter(has_result=False)
-        try:
-            for unanswered_request in unanswered_requests:
+        for unanswered_request in unanswered_requests:
+            try:
                 answer = request.POST[str(unanswered_request.id)]
                 if answer == 'yes':
-                    unanswered_request.accept(user)
+                    if unanswered_request.car.is_rented():
+                        messages.error(request,
+                                       'Car ' + unanswered_request.car.car_type + ' is already rented.')
+                        unanswered_request.reject(user)
+                    else:
+                        unanswered_request.accept(user)
                 elif answer == 'no':
                     unanswered_request.reject(user)
                 else:
                     pass
-        except KeyError:
-            return render(request, 'car_rental/request_list.html',
-                          {'requests': unanswered_requests, 'error_message': "Please answer the requests!"})
-    return HttpResponseRedirect(reverse('car_rental:requests'))
+            except KeyError:
+                pass
+    return HttpResponseRedirect(reverse('car_rental:requests_staff'))
 
 
 @login_required()
@@ -276,12 +307,14 @@ class StaffCreateView(PermissionRequiredMixin, generic.CreateView):
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(decorators.user_is_staff, name='dispatch')
-class StaffListView(PermissionRequiredMixin, filter_views.FilterView):
+class StaffListView(PermissionRequiredMixin, SingleTableMixin, filter_views.FilterView):
     model = Staff
     template_name = 'car_rental/staff_list.html'
     context_object_name = 'staff_list'
+    paginate_by = 7
     permission_required = 'car_rental.can_access_staff'
     filterset_class = my_filters.StaffFilterSet
+    table_class = my_tables.StaffTable
 
     def get_queryset(self):
         return self.request.user.staff.exhibition.staff_set.exclude(id=self.request.user.staff.id)

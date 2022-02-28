@@ -14,6 +14,7 @@
 {% block content %}
 <div class="container">
     <h1>Car number {{ car.id }}</h1>
+        <img src="{{ car.image.url }}"  alt="car image"/>
 {% if car.owner != user.staff.exhibition %}
     {% if car.is_rented %}
         {% if car.renter != user %}
@@ -39,7 +40,6 @@
             <strong>This car needs repair!</strong>
         </div>
 {% endif %}
-        <img src="{{ car.image.url }}"  alt="car image"/>
         <table class="table table-striped table-hover info-table">
             <tr>
                 <td>Model</td>
